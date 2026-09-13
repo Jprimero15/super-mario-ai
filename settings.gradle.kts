@@ -6,5 +6,5 @@ pluginManagement {
     }
 }
 
-rootProject.name = "kotlin-mario-game"
+rootProject.name = "maryou-ai"
 include("core", "android")
