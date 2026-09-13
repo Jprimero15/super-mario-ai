@@ -28,15 +28,37 @@ class PlayScreen(private val game: MarioGame) : Screen {
     private val camera=OrthographicCamera(); private val viewport:Viewport=FitViewport(VIEWPORT_WIDTH,VIEWPORT_HEIGHT,camera)
     private val hudCamera=OrthographicCamera(); private val hudViewport:Viewport=FitViewport(VIEWPORT_WIDTH,VIEWPORT_HEIGHT,hudCamera)
     private val input=TouchInputController(hudViewport)
-    private val shapeRenderer=ShapeRenderer(); private val batch=SpriteBatch(); private val font=BitmapFont().apply{data.setScale(1.25f)}; private val hud=HUD(font)
+    private val shapeRenderer=ShapeRenderer(); private val batch=SpriteBatch(); private val font=BitmapFont().apply{data.setScale(1.18f)}; private val hud=HUD(font)
     private val player=Player(level.playerStart.x,level.playerStart.y)
     private val enemies=level.enemySpawns.map{WalkerEnemy(it.x,it.y)}.toMutableList()
     private val coins=level.coinSpawns.map{Coin(it.x,it.y,it.width,it.height)}.toMutableList()
     private var paused=false; private var elapsedTime=0f; private var levelComplete=false; private var animTime=0f
 
     override fun show(){hudCamera.position.set(hudViewport.worldWidth/2f,hudViewport.worldHeight/2f,0f)}
-    override fun render(delta:Float){val d=delta.coerceIn(0f,1f/30f);input.poll();if(input.isPauseJustPressed())paused=!paused;if(!paused&&!levelComplete)update(d);draw();input.endFrame()}
-    private fun update(delta:Float){elapsedTime+=delta;animTime+=delta;val remaining=LEVEL_TIME_LIMIT-elapsedTime.toInt();if(remaining<=0&&!player.isDead)player.killInstantly();player.updatePhysics(delta,input,collision);for(e in enemies)if(e.alive)e.updatePhysics(delta,collision);handlePlayerEnemyCollisions();handleCoinCollisions();if(player.bounds.y<-200f&&!player.isDead)player.killInstantly();if(player.isDead){player.velocity.y+=Physics.GRAVITY*delta;player.bounds.y+=player.velocity.y*delta;if(player.bounds.y<-400f)respawnOrGameOver()};if(player.bounds.x+player.bounds.width>=level.widthInPixels-level.tileSize)levelComplete=true;updateCamera()}
+
+    override fun render(delta:Float){
+        val d=delta.coerceIn(0f,1f/30f);input.poll()
+        if(input.isPauseJustPressed() && !levelComplete) paused=!paused
+        if(paused){if(input.isRestartJustPressed()){restart();return};if(input.isMenuJustPressed()){game.screen=MainMenuScreen(game);dispose();return}}
+        if(!paused&&!levelComplete)update(d)
+        draw();input.endFrame()
+    }
+
+    private fun restart(){game.screen=PlayScreen(game);dispose()}
+
+    private fun update(delta:Float){
+        elapsedTime+=delta;animTime+=delta
+        val remaining=LEVEL_TIME_LIMIT-elapsedTime.toInt()
+        if(remaining<=0&&!player.isDead)player.killInstantly()
+        player.updatePhysics(delta,input,collision)
+        for(e in enemies)if(e.alive)e.updatePhysics(delta,collision)
+        handlePlayerEnemyCollisions();handleCoinCollisions()
+        if(player.bounds.y<-200f&&!player.isDead)player.killInstantly()
+        if(player.isDead){player.velocity.y+=Physics.GRAVITY*delta;player.bounds.y+=player.velocity.y*delta;if(player.bounds.y<-400f)respawnOrGameOver()}
+        if(player.bounds.x+player.bounds.width>=level.widthInPixels-level.tileSize)levelComplete=true
+        updateCamera()
+    }
+
     private fun handlePlayerEnemyCollisions(){for(enemy in enemies){if(!enemy.alive||player.isDead||!player.bounds.overlaps(enemy.bounds))continue;val stomp=player.velocity.y<0f&&player.bounds.y>=enemy.bounds.y+enemy.bounds.height-10f;if(stomp){enemy.alive=false;player.velocity.y=Player.JUMP_VELOCITY*.5f;player.score+=100}else if(!player.isInvincible){if(player.shrinkOrDie())player.killInstantly()else player.velocity.x=if(player.bounds.x<enemy.bounds.x)-200f else 200f}};enemies.removeAll{!it.alive}}
     private fun handleCoinCollisions(){val i=coins.iterator();while(i.hasNext()){val c=i.next();if(player.bounds.overlaps(c.bounds)){player.score+=10;i.remove()}}}
     private fun respawnOrGameOver(){player.lives-=1;if(player.lives<=0){game.screen=GameOverScreen(game,player.score);dispose();return};player.resetTo(level.playerStart.x,level.playerStart.y)}
@@ -45,7 +67,6 @@ class PlayScreen(private val game: MarioGame) : Screen {
     private fun draw(){
         Gdx.gl.glClearColor(.34f,.66f,.91f,1f);Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
         shapeRenderer.projectionMatrix=camera.combined;shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        // Soft layered sky and distant hills.
         shapeRenderer.color=Color(.47f,.74f,.94f,1f);shapeRenderer.rect(camera.position.x-400f,0f,800f,480f)
         shapeRenderer.color=Color(.30f,.62f,.55f,1f);shapeRenderer.circle(camera.position.x-170f,120f,120f);shapeRenderer.circle(camera.position.x+170f,100f,145f)
         for(tile in level.solidTiles)VectorArt.tile(shapeRenderer,tile,tile.y+tile.height>=level.heightInPixels-level.tileSize)
@@ -55,12 +76,35 @@ class PlayScreen(private val game: MarioGame) : Screen {
         shapeRenderer.end()
 
         shapeRenderer.projectionMatrix=hudCamera.combined;shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        drawButton(input.leftButton,input.isLeftPressed(),Color(.09f,.14f,.21f,1f));drawButton(input.rightButton,input.isRightPressed(),Color(.09f,.14f,.21f,1f));drawButton(input.jumpButton,input.isJumpPressed(),Color(.87f,.16f,.08f,1f));VectorArt.pause(shapeRenderer,input.pauseButton,paused);shapeRenderer.end()
-        batch.projectionMatrix=hudCamera.combined;batch.begin();hud.render(batch,player,(LEVEL_TIME_LIMIT-elapsedTime.toInt()).coerceAtLeast(0))
-        font.draw(batch,"◀",input.leftButton.x+28f,input.leftButton.y+60f);font.draw(batch,"▶",input.rightButton.x+28f,input.rightButton.y+60f);font.draw(batch,"JUMP",input.jumpButton.x+18f,input.jumpButton.y+65f)
-        if(paused)font.draw(batch,"PAUSED",350f,285f);if(levelComplete)font.draw(batch,"LEVEL COMPLETE!   SCORE ${player.score}",220f,285f);batch.end()
+        VectorArt.button(shapeRenderer,input.leftButton,input.isLeftPressed(),Color(.08f,.12f,.18f,1f),.32f)
+        VectorArt.button(shapeRenderer,input.rightButton,input.isRightPressed(),Color(.08f,.12f,.18f,1f),.32f)
+        VectorArt.button(shapeRenderer,input.jumpButton,input.isJumpPressed(),Color(.95f,.18f,.08f,1f),.38f)
+        VectorArt.pause(shapeRenderer,input.pauseButton,paused)
+        if(paused){
+            shapeRenderer.color=Color(.02f,.04f,.08f,.74f);shapeRenderer.rect(0f,0f,800f,480f)
+            shapeRenderer.color=Color(.08f,.12f,.18f,.96f);shapeRenderer.rect(210f,105f,380f,285f)
+            VectorArt.button(shapeRenderer,input.restartButton,input.isRestartJustPressed(),Color(.12f,.20f,.30f,1f),.92f)
+            VectorArt.button(shapeRenderer,input.menuButton,input.isMenuJustPressed(),Color(.12f,.20f,.30f,1f),.92f)
+            VectorArt.playIcon(shapeRenderer,Rectangle(335f,265f,42f,42f))
+            VectorArt.restartIcon(shapeRenderer,Rectangle(267f,171f,42f,42f))
+            VectorArt.homeIcon(shapeRenderer,Rectangle(432f,171f,42f,42f))
+        }
+        shapeRenderer.end()
+
+        batch.projectionMatrix=hudCamera.combined;batch.begin()
+        hud.render(batch,player,(LEVEL_TIME_LIMIT-elapsedTime.toInt()).coerceAtLeast(0))
+        font.setColor(Color.WHITE)
+        font.draw(batch,"‹",input.leftButton.x+27f,input.leftButton.y+52f)
+        font.draw(batch,"›",input.rightButton.x+27f,input.rightButton.y+52f)
+        font.draw(batch,"JUMP",input.jumpButton.x+20f,input.jumpButton.y+56f)
+        if(paused){font.getData().setScale(1.7f);font.draw(batch,"PAUSED",330f,335f);font.getData().setScale(1.05f);font.draw(batch,"Game paused",335f,305f);font.draw(batch,"RESTART",294f,190f);font.draw(batch,"MENU",455f,190f)}
+        if(levelComplete){font.getData().setScale(1.35f);font.draw(batch,"LEVEL COMPLETE!",286f,295f);font.getData().setScale(1.05f);font.draw(batch,"Score  ${player.score}   •   Great run!",305f,265f)}
+        batch.end()
     }
-    private fun drawButton(b:Rectangle,pressed:Boolean,accent:Color){VectorArt.button(shapeRenderer,b,pressed,accent)}
+
     override fun resize(width:Int,height:Int){viewport.update(width,height);hudViewport.update(width,height,true)}
-    override fun pause(){};override fun resume(){};override fun hide(){};override fun dispose(){shapeRenderer.dispose();batch.dispose();font.dispose()}
+    override fun pause() { paused=true }
+    override fun resume() {}
+    override fun hide() {}
+    override fun dispose(){shapeRenderer.dispose();batch.dispose();font.dispose()}
 }
