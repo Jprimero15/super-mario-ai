@@ -2,44 +2,66 @@ package com.yourgame.mario.physics
 
 import com.badlogic.gdx.math.Rectangle
 
-/**
- * Resolves an entity's movement against a list of solid tiles, one axis at a
- * time. Moving and resolving X before Y (rather than both at once) is what
- * avoids tunneling through thin geometry and getting caught on tile corners.
- */
+/** Resolves an entity against static solid rectangles, one axis at a time. */
 class CollisionHandler(private val solids: List<Rectangle>) {
 
-    /** Call after moving `bounds` horizontally. Returns the corrected X velocity. */
     fun resolveX(bounds: Rectangle, velocityX: Float): Float {
-        var vx = velocityX
-        for (tile in solids) {
-            if (bounds.overlaps(tile)) {
-                if (vx > 0f) bounds.x = tile.x - bounds.width
-                else if (vx < 0f) bounds.x = tile.x + tile.width
-                vx = 0f
+        if (velocityX == 0f) return 0f
+
+        var corrected = velocityX
+        if (velocityX > 0f) {
+            var nearestRight = Float.POSITIVE_INFINITY
+            for (tile in solids) {
+                if (!bounds.overlaps(tile)) continue
+                if (tile.x < nearestRight) nearestRight = tile.x
+            }
+            if (nearestRight != Float.POSITIVE_INFINITY) {
+                bounds.x = nearestRight - bounds.width
+                corrected = 0f
+            }
+        } else {
+            var nearestLeft = Float.NEGATIVE_INFINITY
+            for (tile in solids) {
+                if (!bounds.overlaps(tile)) continue
+                if (tile.x + tile.width > nearestLeft) nearestLeft = tile.x + tile.width
+            }
+            if (nearestLeft != Float.NEGATIVE_INFINITY) {
+                bounds.x = nearestLeft
+                corrected = 0f
             }
         }
-        return vx
+        return corrected
     }
 
-    /** Call after moving `bounds` vertically. Returns (correctedVelocityY, isOnGround). */
     fun resolveY(bounds: Rectangle, velocityY: Float): Pair<Float, Boolean> {
-        var vy = velocityY
-        var onGround = false
-        for (tile in solids) {
-            if (bounds.overlaps(tile)) {
-                if (vy > 0f) {
-                    bounds.y = tile.y - bounds.height
-                } else if (vy < 0f) {
-                    bounds.y = tile.y + tile.height
-                    onGround = true
-                }
-                vy = 0f
+        if (velocityY == 0f) return 0f to false
+
+        if (velocityY < 0f) {
+            var highestTop = Float.NEGATIVE_INFINITY
+            for (tile in solids) {
+                if (!bounds.overlaps(tile)) continue
+                if (tile.y + tile.height > highestTop) highestTop = tile.y + tile.height
+            }
+            return if (highestTop != Float.NEGATIVE_INFINITY) {
+                bounds.y = highestTop
+                0f to true
+            } else {
+                velocityY to false
             }
         }
-        return Pair(vy, onGround)
+
+        var lowestBottom = Float.POSITIVE_INFINITY
+        for (tile in solids) {
+            if (!bounds.overlaps(tile)) continue
+            if (tile.y < lowestBottom) lowestBottom = tile.y
+        }
+        return if (lowestBottom != Float.POSITIVE_INFINITY) {
+            bounds.y = lowestBottom - bounds.height
+            0f to false
+        } else {
+            velocityY to false
+        }
     }
 
-    /** Used for ledge detection: is there solid ground at this exact point? */
     fun hasSolidAt(x: Float, y: Float): Boolean = solids.any { it.contains(x, y) }
 }

@@ -67,9 +67,10 @@ class PlayScreen(private val game: MarioGame) : Screen {
     }
 
     override fun render(delta: Float) {
+        val frameDelta = delta.coerceIn(0f, 1f / 30f)
         input.poll()
         if (input.isPauseJustPressed()) paused = !paused
-        if (!paused && !levelComplete) update(delta)
+        if (!paused && !levelComplete) update(frameDelta)
         draw()
         input.endFrame()
     }

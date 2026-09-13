@@ -13,6 +13,12 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        // Keep the APK focused on the ABIs we actually ship native LibGDX
+        // libraries for. ARM64 is the primary modern Android ABI.
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
     }
 
     compileOptions {
@@ -24,6 +30,16 @@ android {
         jvmTarget = "11"
     }
 
+    sourceSets {
+        getByName("main") {
+            // LibGDX's platform artifacts are JARs containing the native
+            // libraries. The copy task below extracts them into the Android
+            // APK's standard jniLibs directory so System.loadLibrary("gdx")
+            // can resolve libgdx.so at runtime.
+            jniLibs.srcDir(layout.buildDirectory.dir("generated/jniLibs/main"))
+        }
+    }
+
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
@@ -32,12 +48,30 @@ android {
 }
 
 val gdxVersion = "1.12.1"
+val nativeOutputDir = layout.buildDirectory.dir("generated/jniLibs/main")
+
+val libGdxNatives by configurations.creating
 
 dependencies {
     implementation(project(":core"))
     implementation("com.badlogicgames.gdx:gdx-backend-android:$gdxVersion")
-    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a")
-    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a")
-    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86")
-    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
+
+    libGdxNatives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a")
+    libGdxNatives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a")
+    libGdxNatives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86")
+    libGdxNatives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
+}
+
+val copyLibGdxNatives by tasks.registering(Sync::class) {
+    description = "Extract LibGDX native libraries into Android jniLibs."
+    group = "build"
+    into(nativeOutputDir)
+    from(libGdxNatives.map { zipTree(it) }) {
+        include("**/*.so")
+        includeEmptyDirs = false
+    }
+}
+
+tasks.named("preBuild") {
+    dependsOn(copyLibGdxNatives)
 }
