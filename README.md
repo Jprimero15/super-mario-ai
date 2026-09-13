@@ -1,59 +1,91 @@
 # Maryou AI
 
-A Kotlin + LibGDX Android platformer built as a lightweight, asset-free Mario-inspired adventure. The project has evolved from a small vertical slice into an **endless procedural platforming game** with responsive touch controls, vector artwork, procedural pipes, checkpoints, coins, scoring, power states, camera following, pause/restart/menu UI, and Android landscape support.
+A Kotlin + LibGDX Android endless platform runner with responsive touch controls, procedural hazards, vector artwork, progressive difficulty, and locally recorded run statistics.
 
 > **Package ID:** `com.maryou.ai`
 
-## Current state
+## Current gameplay
 
-### Gameplay
+- **Auto-run:** the character continuously runs forward.
+- **Progressive speed:** run speed increases every 100 steps, gradually up to a safe cap.
+- **Endless world:** procedural chunks are generated ahead of the player with no fixed finish line.
+- **Monster progression:** monster encounters begin after the opening and scale from small to medium to large as distance increases, with the major tier progression changing every 200 steps.
+- **Standing pipes:** pipes are real collision obstacles with varied heights and spacing.
+- **Pipe rule:** landing on the top of a pipe is safe; running into its side costs a life/power state.
+- **Monsters:** jumping on a monster defeats it and gives bonus score; side contact costs a life/power state.
+- **Holes:** deliberate 1–2 tile gaps are generated with readable dark vector interiors and safe spacing from other hazards.
+- **Coins:** coins are placed with overlap protection so they do not visually stack with pipes or other obstacles.
+- **Checkpoints:** progress checkpoints move forward during long runs.
+- **Game over:** falling into a hole or taking fatal damage ends the run after lives are exhausted.
 
-- Endless procedural side-scrolling world — there is no fixed final level.
-- Deterministic procedural generation with a world seed, giving each run a randomized but reproducible layout.
-- New terrain is generated ahead of the player as they move.
-- Random ground gaps, elevated coin routes, coin clusters, and standing pipe obstacles.
-- Standing pipes are real collision obstacles, not decoration.
-- Automatic forward world generation keeps the adventure going indefinitely.
-- Progressive respawn checkpoints so long runs do not send the player all the way back to the beginning.
-- Coins increase score.
-- Player supports small/big power states.
-- Lives and game-over flow remain in place.
-- Camera follows the player continuously.
+## Run records
 
-### Mobile controls
+Every completed run records its best values locally on the device using LibGDX preferences:
+
+- Best score
+- Best coins collected
+- Best steps reached
+
+The current run also displays score, lives, steps, coins, and current speed in the HUD. The game-over screen shows the final run statistics.
+
+## Controls
 
 The game is designed for Android landscape play.
 
 | Control | Action |
 |---|---|
-| Left | Move left |
-| Right | Move right |
+| Left | Steer left while auto-running |
+| Right | Steer right while auto-running |
 | Jump | Jump; hold for a higher jump |
 | Pause | Pause the run |
 
-Controls now use a dedicated bottom screen band, keeping the playable world above the controls instead of drawing the buttons over the character. Visual buttons are translucent while their touch hit areas remain comfortably larger for reliable taps.
+The controls occupy a dedicated bottom band, keeping them away from the character and gameplay. Their visual buttons are compact while the invisible touch targets are larger for reliable mobile input. The input controller samples multiple touch pointers every frame, so steering and jumping can be used together.
 
-The input system polls all available Android touch pointers every frame, allowing direction + jump and other simultaneous touches without sacrificing responsiveness.
+## UI/UX direction
 
-## Visual design
+The current UI uses:
 
-The game uses resolution-independent LibGDX `ShapeRenderer` vector primitives instead of bitmap sprites for the core gameplay artwork.
+- Measured/centered HUD text to prevent overlapping labels.
+- Four evenly spaced top HUD cards for score, lives, steps, and coins.
+- A compact lower status line for auto-run, steps, coins, and speed.
+- Soft translucent panels instead of heavy opaque controls.
+- Consistent blue/green/gold/red accent colors.
+- A redesigned pause panel with clean restart/menu actions.
+- A redesigned main menu with clear hierarchy and saved-record preview.
+- Responsive landscape viewport separation so the gameplay area remains visually clear above the touch-control strip.
 
-Current vector artwork includes:
+## Vector artwork
 
-- Player character
-- Coins with animated rotation
-- Ground/grass tiles
-- Standing pipe obstacles
-- Direction controls
-- Jump control
+Gameplay artwork is rendered with LibGDX `ShapeRenderer` primitives, keeping the core visuals resolution-independent without a large bitmap asset pack.
+
+Vector-style artwork includes:
+
+- Player
+- Small/medium/large monsters
+- Animated coins
+- Ground and grass tiles
+- Standing pipes
+- Designed holes
+- Touch controls
 - Pause/restart/menu icons
 - HUD panels
 - Android launcher icon
 
-The palette has been softened into a cohesive blue/green/gold/red theme with translucent UI layers so the controls and HUD blend into the game rather than dominating the scene.
+## Endless procedural architecture
 
-## Android app
+`Level.kt` generates deterministic chunks from a seed as the player approaches unexplored terrain. Each chunk can contain:
+
+1. Ground terrain.
+2. Deliberate holes with readable spacing.
+3. Elevated coin routes.
+4. Standing pipes with varying heights.
+5. Monster encounters whose tiers scale with distance.
+
+Generated solids are added to the runtime collision grid through `CollisionHandler`, so newly generated terrain and pipes immediately participate in physics.
+
+The world is generated incrementally rather than storing a giant map in memory.
+
+## Android
 
 - **Application ID:** `com.maryou.ai`
 - **Android namespace:** `com.maryou.ai`
@@ -62,13 +94,10 @@ The palette has been softened into a cohesive blue/green/gold/red theme with tra
 - **Compile SDK:** 34
 - **Target SDK:** 34
 - **Java:** 11
-- **Kotlin:** Android/Kotlin DSL setup
 - **LibGDX:** 1.12.1
 - **Supported ABIs:** `armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`
-- **Orientation:** sensor landscape, supporting both landscape rotations
+- **Orientation:** sensor landscape
 - **Launcher icon:** custom Android vector drawable
-
-The Android module also contains the LibGDX native extraction task. Native libraries are placed into the correct ABI directory structure before the Android build, preventing the previous `libgdx.so is not an ABI` packaging failure.
 
 ## Project structure
 
@@ -80,84 +109,49 @@ super-mario-ai/
 │       ├── entities/
 │       │   ├── Entity.kt
 │       │   ├── Player.kt
-│       │   └── Coin.kt
+│       │   ├── Coin.kt
+│       │   └── WalkerEnemy.kt
 │       ├── input/
-│       │   ├── InputController.kt
-│       │   └── TouchInputController.kt
 │       ├── physics/
-│       │   ├── Physics.kt
-│       │   └── CollisionHandler.kt
 │       ├── screens/
-│       │   ├── MainMenuScreen.kt
-│       │   ├── PlayScreen.kt
-│       │   └── GameOverScreen.kt
 │       ├── ui/
-│       │   ├── HUD.kt
-│       │   └── VectorArt.kt
 │       └── world/
 │           └── Level.kt
-│
 ├── android/
 │   ├── build.gradle.kts
 │   └── src/main/
 │       ├── AndroidManifest.xml
-│       ├── kotlin/com/maryou/ai/AndroidLauncher.kt
 │       └── res/drawable/ic_launcher_vector.xml
-│
 ├── build.gradle.kts
 ├── settings.gradle.kts
 └── README.md
 ```
 
-The Android application/package identity is now `com.maryou.ai`. The existing LibGDX core Kotlin package names are retained for compatibility with the current source tree; changing the Android application ID does not require changing every internal Kotlin package.
-
-## Endless world architecture
-
-`Level.kt` no longer contains one fixed hand-authored map. It generates world chunks from a seed as the player approaches unexplored terrain.
-
-The generator creates:
-
-1. Ground terrain and occasional short gaps.
-2. Random coin placements.
-3. Elevated coin routes.
-4. Standing pipe obstacles of varying heights.
-5. Additional chunks before the player can reach the end of generated content.
-
-`CollisionHandler` supports adding new solid tiles at runtime, so newly generated terrain and pipes immediately become part of the collision grid.
-
-This gives the game an effectively endless adventure without loading a giant map into memory at startup.
-
 ## Build
 
 Requirements:
 
-- Android Studio or a compatible Gradle/JDK environment
-- Android SDK with API 34 installed
-- Internet access for the initial dependency download
+- Android SDK API 34
+- JDK/Gradle environment compatible with the project
+- Internet access for dependency downloads
 
-Typical build command:
+Debug APK:
 
 ```bash
 gradle android:assembleDebug
 ```
 
-Install directly to a connected Android device with:
+Install to a connected device:
 
 ```bash
 gradle android:installDebug
 ```
 
-The repository also contains the Android GitHub Actions build workflow for automated APK builds.
+The repository also includes a GitHub Actions Android build workflow.
 
-## Previous major build fix
+## Native LibGDX packaging
 
-The LibGDX Android native packaging pipeline previously produced:
-
-```text
-out/libgdx.so
-```
-
-instead of the required ABI-specific layout. The extraction task was corrected to produce:
+The Android build contains the corrected LibGDX native extraction pipeline. Native libraries must remain inside ABI-specific directories:
 
 ```text
 lib/armeabi-v7a/libgdx.so
@@ -166,22 +160,18 @@ lib/x86/libgdx.so
 lib/x86_64/libgdx.so
 ```
 
-That fixed the Android `mergeDebugNativeLibs` failure where Gradle reported that `libgdx.so` was not an ABI. The game was subsequently confirmed working before the current endless-world/UI expansion.
+This avoids the previous `mergeDebugNativeLibs` failure where Gradle reported that `libgdx.so` was not an ABI.
 
 ## Design direction
 
-Maryou AI is intentionally staying lightweight:
+Maryou AI is intentionally lightweight and asset-efficient:
 
 - Kotlin
 - LibGDX
 - Android
-- Procedural/vector gameplay
-- No large sprite pack required
+- Vector-style procedural rendering
+- Endless procedural gameplay
+- Local run records
 - No external database required for the core game
-- No fixed level map required for endless mode
 
-The architecture leaves room for future additions such as audio, more power-ups, bosses, richer procedural structures, saved run statistics, and more advanced enemy AI without replacing the current rendering/input foundation.
-
-## License
-
-This repository is a personal development project. Add a project-specific license here if/when the project is released publicly.
+The foundation can be extended with more enemy behaviors, bosses, power-ups, audio, richer procedural structures, and additional game modes without replacing the current rendering and input architecture.
