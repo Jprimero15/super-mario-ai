@@ -14,8 +14,6 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // Keep the APK focused on the ABIs we actually ship native LibGDX
-        // libraries for. ARM64 is the primary modern Android ABI.
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         }
@@ -32,8 +30,7 @@ android {
 
     sourceSets {
         getByName("main") {
-            // LibGDX's platform artifacts are JARs containing the native
-            // libraries. Extract them into Android's standard jniLibs tree.
+            // Native LibGDX libraries are generated into an ABI-rooted tree.
             jniLibs.srcDir(layout.buildDirectory.dir("generated/jniLibs/main"))
         }
     }
@@ -60,20 +57,36 @@ dependencies {
     libGdxNatives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
 }
 
-val copyLibGdxNatives by tasks.registering(Sync::class) {
-    description = "Extract LibGDX native libraries into Android jniLibs."
+val copyLibGdxNatives by tasks.registering {
+    description = "Extract LibGDX native libraries into ABI-specific Android jniLibs directories."
     group = "build"
-    into(nativeOutputDir)
+    outputs.dir(nativeOutputDir)
 
-    // Resolve the native configuration as a task input rather than during
-    // project configuration. Gradle 8 otherwise warns about configuration
-    // being resolved during configuration time.
-    from(libGdxNatives.elements.map { files(it).map { artifact -> zipTree(artifact) } }) {
-        include("**/*.so")
-        includeEmptyDirs = false
-        // Some LibGDX native artifacts can expose the same native entry more
-        // than once. Do not fail the build over identical archive entries.
-        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    doLast {
+        // Resolve only during task execution and explicitly restore the ABI
+        // directory. The previous zipTree/Sync approach flattened libgdx.so
+        // to the output root, which Android Gradle Plugin rejects because
+        // every native library must live under lib/<ABI>/.
+        libGdxNatives.resolve().forEach { nativeJar ->
+            val abi = nativeJar.name
+                .substringAfter("natives-", "")
+                .substringBeforeLast(".jar")
+
+            require(abi in setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")) {
+                "Unsupported LibGDX native ABI artifact: ${nativeJar.name}"
+            }
+
+            project.copy {
+                from(zipTree(nativeJar)) {
+                    include("**/*.so")
+                    eachFile {
+                        relativePath = RelativePath(true, "lib", abi, name)
+                    }
+                    includeEmptyDirs = false
+                }
+                into(nativeOutputDir)
+            }
+        }
     }
 }
 
