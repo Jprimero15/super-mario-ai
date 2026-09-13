@@ -35,7 +35,7 @@ android {
 }
 
 val gdxVersion = "1.12.1"
-val nativeOutputDir = layout.buildDirectory.dir("generated/jniLibs/main")
+val nativeOutputRoot = layout.buildDirectory.dir("generated/jniLibs/main")
 
 val nativesArmeabiV7a by configurations.creating
 val nativesArm64V8a by configurations.creating
@@ -52,46 +52,58 @@ dependencies {
     nativesX86_64("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
 }
 
-val copyLibGdxNatives by tasks.registering(Sync::class) {
-    description = "Extract LibGDX natives into the correct Android ABI directories."
+// LibGDX native JARs contain libgdx.so below an ABI-specific path such as
+// natives/armeabi-v7a/libgdx.so. Android's jniLibs source set requires the
+// ABI directory itself to be the immediate parent of the .so file.
+//
+// Keep one Sync task per ABI. The previous single Sync task used nested
+// `into(...)` blocks and could produce `.../jniLibs/main/out/libgdx.so`,
+// which Android then interpreted as an ABI named "out".
+fun registerLibGdxNativeTask(
+    taskName: String,
+    abi: String,
+    configuration: Configuration
+) = tasks.register(taskName, Sync::class) {
     group = "build"
-    into(nativeOutputDir)
-
-    // Each native JAR contains the same filename (libgdx.so) inside its
-    // own ABI-specific archive path. We intentionally flatten that path,
-    // but Gradle 8.7 treats the resulting identical filenames as duplicates.
-    // EXCLUDE is safe here because each ABI is copied into a separate folder.
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-    into("armeabi-v7a") {
-        from(nativesArmeabiV7a.files.map { zipTree(it) })
-        include("**/libgdx.so")
-        includeEmptyDirs = false
-        eachFile { path = "libgdx.so" }
-    }
-
-    into("arm64-v8a") {
-        from(nativesArm64V8a.files.map { zipTree(it) })
-        include("**/libgdx.so")
-        includeEmptyDirs = false
-        eachFile { path = "libgdx.so" }
-    }
-
-    into("x86") {
-        from(nativesX86.files.map { zipTree(it) })
-        include("**/libgdx.so")
-        includeEmptyDirs = false
-        eachFile { path = "libgdx.so" }
-    }
-
-    into("x86_64") {
-        from(nativesX86_64.files.map { zipTree(it) })
-        include("**/libgdx.so")
-        includeEmptyDirs = false
-        eachFile { path = "libgdx.so" }
+    description = "Extract LibGDX native library for $abi."
+    into(nativeOutputRoot.map { it.resolve(abi) })
+    from(configuration.files.map { zipTree(it) })
+    include("**/libgdx.so")
+    includeEmptyDirs = false
+    eachFile {
+        path = "libgdx.so"
     }
 }
 
+val copyLibGdxArmeabiV7a = registerLibGdxNativeTask(
+    "copyLibGdxArmeabiV7a",
+    "armeabi-v7a",
+    nativesArmeabiV7a
+)
+
+val copyLibGdxArm64V8a = registerLibGdxNativeTask(
+    "copyLibGdxArm64V8a",
+    "arm64-v8a",
+    nativesArm64V8a
+)
+
+val copyLibGdxX86 = registerLibGdxNativeTask(
+    "copyLibGdxX86",
+    "x86",
+    nativesX86
+)
+
+val copyLibGdxX86_64 = registerLibGdxNativeTask(
+    "copyLibGdxX86_64",
+    "x86_64",
+    nativesX86_64
+)
+
 tasks.named("preBuild") {
-    dependsOn(copyLibGdxNatives)
+    dependsOn(
+        copyLibGdxArmeabiV7a,
+        copyLibGdxArm64V8a,
+        copyLibGdxX86,
+        copyLibGdxX86_64
+    )
 }
