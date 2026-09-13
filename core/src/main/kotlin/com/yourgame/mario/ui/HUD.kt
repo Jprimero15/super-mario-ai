@@ -6,17 +6,17 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.yourgame.mario.entities.Player
 
-/** Consistent four-column HUD for the 800x480 UI viewport. */
+/** Compact, evenly spaced HUD with measured text so labels never collide. */
 class HUD(private val font: BitmapFont) {
     private val layout = GlyphLayout()
-    private val primary = Color(.96f, .98f, 1f, 1f)
-    private val secondary = Color(.72f, .82f, .91f, 1f)
+    private val primary = Color(.97f, .99f, 1f, 1f)
+    private val secondary = Color(.72f, .84f, .94f, 1f)
 
-    fun render(batch: SpriteBatch, player: Player, timeRemaining: Int) {
-        drawCentered(batch, "SCORE  ${player.score.toString().padStart(5, '0')}", 105f, 452f, primary, 1.0f)
-        drawCentered(batch, "LIVES  ${player.lives}", 295f, 452f, primary, 1.0f)
-        drawCentered(batch, "TIME  ${timeRemaining.toString().padStart(3, '0')}", 485f, 452f, primary, 1.0f)
-        drawCentered(batch, if (player.size.name == "BIG") "POWER  BIG" else "POWER  SMALL", 675f, 452f, secondary, .94f)
+    fun render(batch: SpriteBatch, player: Player, steps: Int) {
+        drawCentered(batch, "SCORE  ${player.score.toString().padStart(5, '0')}", 108f, 452f, primary, .92f)
+        drawCentered(batch, "LIVES  ${player.lives}", 302f, 452f, primary, .92f)
+        drawCentered(batch, "STEPS  $steps", 496f, 452f, primary, .92f)
+        drawCentered(batch, "COINS  ${player.coinsCollected}", 690f, 452f, secondary, .92f)
     }
 
     private fun drawCentered(batch: SpriteBatch, text: String, centerX: Float, baselineY: Float, color: Color, scale: Float) {
