@@ -5,7 +5,7 @@ plugins {
 }
 
 allprojects {
-    group = "com.yourgame.mario"
+    group = "com.jprimero15.maryouai"
     version = "1.0"
 
     repositories {
