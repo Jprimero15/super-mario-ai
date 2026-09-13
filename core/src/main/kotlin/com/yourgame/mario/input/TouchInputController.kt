@@ -5,22 +5,22 @@ import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.viewport.Viewport
 
-/** High-response polling controller with independent touch hit zones. */
+/** Responsive multi-touch controller. Direction and jump can be held together. */
 class TouchInputController(private val viewport: Viewport) : InputController {
-    // Visual bounds are intentionally smaller than their touch targets.
-    val leftButton = Rectangle(20f, 14f, 50f, 50f)
-    val rightButton = Rectangle(88f, 14f, 50f, 50f)
-    val jumpButton = Rectangle(718f, 10f, 62f, 62f)
+    val leftButton = Rectangle(18f, 14f, 54f, 54f)
+    val rightButton = Rectangle(92f, 14f, 54f, 54f)
+    val jumpButton = Rectangle(718f, 10f, 64f, 64f)
     val pauseButton = Rectangle(748f, 424f, 32f, 32f)
     val restartButton = Rectangle(275f, 150f, 110f, 50f)
     val menuButton = Rectangle(415f, 150f, 110f, 50f)
 
-    private val leftHit = Rectangle(8f, 4f, 70f, 76f)
-    private val rightHit = Rectangle(82f, 4f, 70f, 76f)
-    private val jumpHit = Rectangle(700f, 2f, 98f, 80f)
-    private val pauseHit = Rectangle(736f, 412f, 44f, 48f)
-    private val restartHit = Rectangle(262f, 140f, 136f, 72f)
-    private val menuHit = Rectangle(402f, 140f, 136f, 72f)
+    // Generous touch zones; map through the HUD viewport so they stay correct on all aspect ratios.
+    private val leftHit = Rectangle(0f, 0f, 86f, 86f)
+    private val rightHit = Rectangle(80f, 0f, 86f, 86f)
+    private val jumpHit = Rectangle(690f, 0f, 110f, 88f)
+    private val pauseHit = Rectangle(730f, 405f, 70f, 75f)
+    private val restartHit = Rectangle(250f, 130f, 160f, 90f)
+    private val menuHit = Rectangle(390f, 130f, 160f, 90f)
 
     private var leftDown = false
     private var rightDown = false
@@ -34,12 +34,10 @@ class TouchInputController(private val viewport: Viewport) : InputController {
     private var menuWasDown = false
     private val touchPoint = Vector2()
 
-    /** Poll every available pointer every frame; direction + jump can be simultaneous. */
     fun poll() {
         leftDown = false; rightDown = false; jumpDown = false
         pauseDown = false; restartDown = false; menuDown = false
-        val maxPointers = 20
-        for (pointer in 0 until maxPointers) {
+        for (pointer in 0 until 20) {
             if (!Gdx.input.isTouched(pointer)) continue
             touchPoint.set(Gdx.input.getX(pointer).toFloat(), Gdx.input.getY(pointer).toFloat())
             viewport.unproject(touchPoint)
