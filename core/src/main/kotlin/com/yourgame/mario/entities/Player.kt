@@ -5,21 +5,22 @@ import com.yourgame.mario.physics.CollisionHandler
 import com.yourgame.mario.physics.Physics
 
 enum class PlayerSize(val width: Float, val height: Float) {
-    SMALL(28f, 28f),
-    BIG(28f, 56f)
+    SMALL(28f, 28f), BIG(28f, 56f)
 }
 
 class Player(startX: Float, startY: Float) :
     Entity(startX, startY, PlayerSize.SMALL.width, PlayerSize.SMALL.height) {
 
     companion object {
-        const val MOVE_SPEED = 220f
-        const val ACCEL = 1400f
-        const val FRICTION = 1600f
-        const val JUMP_VELOCITY = 480f
-        const val MIN_JUMP_VELOCITY = 180f
-        const val COYOTE_TIME = 0.1f
-        const val JUMP_BUFFER = 0.12f
+        const val BASE_RUN_SPEED = 250f
+        const val SPEED_PER_100_STEPS = 16f
+        const val MAX_RUN_SPEED = 430f
+        const val ACCEL = 1800f
+        const val FRICTION = 1800f
+        const val JUMP_VELOCITY = 500f
+        const val MIN_JUMP_VELOCITY = 190f
+        const val COYOTE_TIME = 0.12f
+        const val JUMP_BUFFER = 0.14f
     }
 
     var size = PlayerSize.SMALL
@@ -33,6 +34,7 @@ class Player(startX: Float, startY: Float) :
     var isDead = false
 
     var score = 0
+    var coinsCollected = 0
     var lives = 3
 
     private var invincibleTimer = 0f
@@ -40,23 +42,24 @@ class Player(startX: Float, startY: Float) :
     private var jumpBufferTimer = 0f
     private var jumpHeld = false
 
+    fun currentRunSpeed(steps: Int): Float =
+        (BASE_RUN_SPEED + (steps / 100) * SPEED_PER_100_STEPS).coerceAtMost(MAX_RUN_SPEED)
+
     fun grow() {
         if (size == PlayerSize.SMALL) {
             size = PlayerSize.BIG
             bounds.height = size.height
+            bounds.y -= (PlayerSize.BIG.height - PlayerSize.SMALL.height)
         }
     }
 
-    /** Returns true if this hit is fatal (player was already Small). */
     fun shrinkOrDie(): Boolean {
         return if (size == PlayerSize.BIG) {
             size = PlayerSize.SMALL
             bounds.height = size.height
             startInvincibility()
             false
-        } else {
-            true
-        }
+        } else true
     }
 
     fun startInvincibility(duration: Float = 1.5f) {
@@ -77,27 +80,20 @@ class Player(startX: Float, startY: Float) :
         startInvincibility(2f)
     }
 
-    fun updatePhysics(delta: Float, input: InputController, collision: CollisionHandler) {
+    fun updatePhysics(delta: Float, input: InputController, collision: CollisionHandler, steps: Int) {
         if (isDead) return
 
-        // --- Horizontal movement (accelerate toward max speed, decelerate via friction) ---
-        val moveDir = when {
+        // Auto-run: forward motion is continuous. Left/right remains available for steering.
+        val steer = when {
             input.isLeftPressed() -> -1f
             input.isRightPressed() -> 1f
             else -> 0f
         }
+        val targetSpeed = if (steer < 0f) -currentRunSpeed(steps) else currentRunSpeed(steps)
+        facingRight = targetSpeed >= 0f
+        velocity.x += (targetSpeed - velocity.x) * (1f - kotlin.math.exp(-12f * delta))
+        velocity.x = velocity.x.coerceIn(-MAX_RUN_SPEED, MAX_RUN_SPEED)
 
-        if (moveDir != 0f) {
-            facingRight = moveDir > 0f
-            velocity.x += moveDir * ACCEL * delta
-            velocity.x = velocity.x.coerceIn(-MOVE_SPEED, MOVE_SPEED)
-        } else if (velocity.x > 0f) {
-            velocity.x = (velocity.x - FRICTION * delta).coerceAtLeast(0f)
-        } else if (velocity.x < 0f) {
-            velocity.x = (velocity.x + FRICTION * delta).coerceAtMost(0f)
-        }
-
-        // --- Coyote time (grace period after walking off a ledge) & jump buffering ---
         coyoteTimer = if (onGround) COYOTE_TIME else (coyoteTimer - delta).coerceAtLeast(0f)
         jumpBufferTimer = if (input.isJumpJustPressed()) JUMP_BUFFER else (jumpBufferTimer - delta).coerceAtLeast(0f)
 
@@ -109,20 +105,14 @@ class Player(startX: Float, startY: Float) :
             onGround = false
         }
 
-        // --- Variable jump height: cut the rise short if the button is released early ---
-        if (jumpHeld && !input.isJumpPressed() && velocity.y > MIN_JUMP_VELOCITY) {
-            velocity.y = MIN_JUMP_VELOCITY
-        }
+        if (jumpHeld && !input.isJumpPressed() && velocity.y > MIN_JUMP_VELOCITY) velocity.y = MIN_JUMP_VELOCITY
         if (!input.isJumpPressed()) jumpHeld = false
 
-        // --- Gravity ---
         velocity.y += Physics.GRAVITY * delta
         velocity.y = velocity.y.coerceAtLeast(Physics.TERMINAL_VELOCITY)
 
-        // --- Move and resolve X, then Y (prevents tunneling / corner snagging) ---
         bounds.x += velocity.x * delta
         collision.resolveX(bounds, velocity)
-
         bounds.y += velocity.y * delta
         onGround = collision.resolveY(bounds, velocity)
 
