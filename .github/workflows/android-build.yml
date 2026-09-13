@@ -10,8 +10,10 @@ on:
 # Build everything inside the requested Arch Linux image. The image is
 # responsible for the base OS; the workflow installs the Android/JVM tooling
 # needed by this Gradle project so builds remain reproducible.
-container:
-  image: jprimero15/archlinux-docker:latest
+    runs-on: ubuntu-latest
+
+    container:
+      image: jprimero15/archlinux-docker:latest
 
 permissions:
   contents: read
@@ -25,6 +27,9 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    container:
+      image: jprimero15/archlinux-docker:latest
 
     steps:
       - name: Install build tools
