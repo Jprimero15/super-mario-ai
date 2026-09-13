@@ -13,9 +13,7 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
-        ndk {
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-        }
+        ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64") }
     }
 
     compileOptions {
@@ -31,9 +29,7 @@ android {
         }
     }
 
-    buildTypes {
-        getByName("release") { isMinifyEnabled = false }
-    }
+    buildTypes { getByName("release") { isMinifyEnabled = false } }
 }
 
 val gdxVersion = "1.12.1"
@@ -52,17 +48,12 @@ dependencies {
 val copyLibGdxNatives by tasks.registering(Sync::class) {
     description = "Extract LibGDX native libraries into Android jniLibs."
     group = "build"
-    from(libGdxNatives.elements.map { elements ->
-        elements.map { element ->
-            val artifact = element.asFile
-            val abi = artifact.name.substringAfter("natives-").substringBeforeLast(".")
-            zipTree(artifact).matching { include("**/*.so") }.map { file ->
-                file.relativeTo(zipTree(artifact).files.first().parentFile)
-            }
-        }
-    })
     into(nativeOutputDir)
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(libGdxNatives.elements.map { files(it).map { artifact -> zipTree(artifact) } }) {
+        include("**/*.so")
+        includeEmptyDirs = false
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
 }
 
 tasks.named("preBuild") { dependsOn(copyLibGdxNatives) }
