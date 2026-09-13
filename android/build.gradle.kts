@@ -29,7 +29,9 @@ android {
         }
     }
 
-    buildTypes { getByName("release") { isMinifyEnabled = false } }
+    buildTypes {
+        getByName("release") { isMinifyEnabled = false }
+    }
 }
 
 val gdxVersion = "1.12.1"
@@ -50,10 +52,12 @@ dependencies {
     nativesX86_64("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
 }
 
-fun CopySpec.flattenNativeLib() {
+fun CopySpec flattenNativeLibrary() {
     include("**/libgdx.so")
     includeEmptyDirs = false
-    eachFile { path = "libgdx.so" }
+    eachFile {
+        path = "libgdx.so"
+    }
 }
 
 val copyLibGdxNatives by tasks.registering(Sync::class) {
@@ -62,28 +66,30 @@ val copyLibGdxNatives by tasks.registering(Sync::class) {
     into(nativeOutputDir)
 
     into("armeabi-v7a") {
-        from(nativesArmeabiV7a.map { configuration -> configuration.map { artifact -> zipTree(artifact) } }) {
-            flattenNativeLib()
+        from(nativesArmeabiV7a.files.map { zipTree(it) }) {
+            flattenNativeLibrary()
         }
     }
 
     into("arm64-v8a") {
-        from(nativesArm64V8a.map { configuration -> configuration.map { artifact -> zipTree(artifact) } }) {
-            flattenNativeLib()
+        from(nativesArm64V8a.files.map { zipTree(it) }) {
+            flattenNativeLibrary()
         }
     }
 
     into("x86") {
-        from(nativesX86.map { configuration -> configuration.map { artifact -> zipTree(artifact) } }) {
-            flattenNativeLib()
+        from(nativesX86.files.map { zipTree(it) }) {
+            flattenNativeLibrary()
         }
     }
 
     into("x86_64") {
-        from(nativesX86_64.map { configuration -> configuration.map { artifact -> zipTree(artifact) } }) {
-            flattenNativeLib()
+        from(nativesX86_64.files.map { zipTree(it) }) {
+            flattenNativeLibrary()
         }
     }
 }
 
-tasks.named("preBuild") { dependsOn(copyLibGdxNatives) }
+tasks.named("preBuild") {
+    dependsOn(copyLibGdxNatives)
+}
