@@ -66,16 +66,14 @@ class Player(startX: Float, startY: Float) :
 
     fun killInstantly() {
         isDead = true
-        velocityX = 0f
-        velocityY = JUMP_VELOCITY * 0.6f
+        velocity.set(0f, JUMP_VELOCITY * 0.6f)
     }
 
     fun resetTo(x: Float, y: Float) {
         isDead = false
         bounds.x = x
         bounds.y = y
-        velocityX = 0f
-        velocityY = 0f
+        velocity.setZero()
         startInvincibility(2f)
     }
 
@@ -91,12 +89,12 @@ class Player(startX: Float, startY: Float) :
 
         if (moveDir != 0f) {
             facingRight = moveDir > 0f
-            velocityX += moveDir * ACCEL * delta
-            velocityX = velocityX.coerceIn(-MOVE_SPEED, MOVE_SPEED)
-        } else if (velocityX > 0f) {
-            velocityX = (velocityX - FRICTION * delta).coerceAtLeast(0f)
-        } else if (velocityX < 0f) {
-            velocityX = (velocityX + FRICTION * delta).coerceAtMost(0f)
+            velocity.x += moveDir * ACCEL * delta
+            velocity.x = velocity.x.coerceIn(-MOVE_SPEED, MOVE_SPEED)
+        } else if (velocity.x > 0f) {
+            velocity.x = (velocity.x - FRICTION * delta).coerceAtLeast(0f)
+        } else if (velocity.x < 0f) {
+            velocity.x = (velocity.x + FRICTION * delta).coerceAtMost(0f)
         }
 
         // --- Coyote time (grace period after walking off a ledge) & jump buffering ---
@@ -104,7 +102,7 @@ class Player(startX: Float, startY: Float) :
         jumpBufferTimer = if (input.isJumpJustPressed()) JUMP_BUFFER else (jumpBufferTimer - delta).coerceAtLeast(0f)
 
         if (jumpBufferTimer > 0f && coyoteTimer > 0f) {
-            velocityY = JUMP_VELOCITY
+            velocity.y = JUMP_VELOCITY
             jumpHeld = true
             coyoteTimer = 0f
             jumpBufferTimer = 0f
@@ -112,23 +110,21 @@ class Player(startX: Float, startY: Float) :
         }
 
         // --- Variable jump height: cut the rise short if the button is released early ---
-        if (jumpHeld && !input.isJumpPressed() && velocityY > MIN_JUMP_VELOCITY) {
-            velocityY = MIN_JUMP_VELOCITY
+        if (jumpHeld && !input.isJumpPressed() && velocity.y > MIN_JUMP_VELOCITY) {
+            velocity.y = MIN_JUMP_VELOCITY
         }
         if (!input.isJumpPressed()) jumpHeld = false
 
         // --- Gravity ---
-        velocityY += Physics.GRAVITY * delta
-        velocityY = velocityY.coerceAtLeast(Physics.TERMINAL_VELOCITY)
+        velocity.y += Physics.GRAVITY * delta
+        velocity.y = velocity.y.coerceAtLeast(Physics.TERMINAL_VELOCITY)
 
         // --- Move and resolve X, then Y (prevents tunneling / corner snagging) ---
-        bounds.x += velocityX * delta
-        velocityX = collision.resolveX(bounds, velocityX)
+        bounds.x += velocity.x * delta
+        collision.resolveX(bounds, velocity)
 
-        bounds.y += velocityY * delta
-        val (resolvedVy, grounded) = collision.resolveY(bounds, velocityY)
-        velocityY = resolvedVy
-        onGround = grounded
+        bounds.y += velocity.y * delta
+        onGround = collision.resolveY(bounds, velocity)
 
         if (isInvincible) {
             invincibleTimer -= delta

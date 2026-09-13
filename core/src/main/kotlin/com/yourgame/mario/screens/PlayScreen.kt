@@ -97,8 +97,8 @@ class PlayScreen(private val game: MarioGame) : Screen {
         }
 
         if (player.isDead) {
-            player.velocityY += Physics.GRAVITY * delta
-            player.bounds.y += player.velocityY * delta
+            player.velocity.y += Physics.GRAVITY * delta
+            player.bounds.y += player.velocity.y * delta
             if (player.bounds.y < -400f) respawnOrGameOver()
         }
 
@@ -115,19 +115,19 @@ class PlayScreen(private val game: MarioGame) : Screen {
             if (!enemy.alive || player.isDead) continue
             if (!player.bounds.overlaps(enemy.bounds)) continue
 
-            val stompedFromAbove = player.velocityY < 0f &&
+            val stompedFromAbove = player.velocity.y < 0f &&
                 player.bounds.y >= (enemy.bounds.y + enemy.bounds.height - 10f)
 
             if (stompedFromAbove) {
                 enemy.alive = false
-                player.velocityY = Player.JUMP_VELOCITY * 0.5f
+                player.velocity.y = Player.JUMP_VELOCITY * 0.5f
                 player.score += 100
             } else if (!player.isInvincible) {
                 val fatal = player.shrinkOrDie()
                 if (fatal) {
                     player.killInstantly()
                 } else {
-                    player.velocityX = if (player.bounds.x < enemy.bounds.x) -200f else 200f
+                    player.velocity.x = if (player.bounds.x < enemy.bounds.x) -200f else 200f
                 }
             }
         }

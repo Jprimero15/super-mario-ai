@@ -19,20 +19,19 @@ class WalkerEnemy(startX: Float, startY: Float) : Entity(startX, startY, 28f, 28
     fun updatePhysics(delta: Float, collision: CollisionHandler) {
         if (!alive) return
 
-        velocityX = SPEED * direction
-        velocityY += Physics.GRAVITY * delta
-        velocityY = velocityY.coerceAtLeast(Physics.TERMINAL_VELOCITY)
+        velocity.x = SPEED * direction
+        velocity.y += Physics.GRAVITY * delta
+        velocity.y = velocity.y.coerceAtLeast(Physics.TERMINAL_VELOCITY)
 
-        bounds.x += velocityX * delta
-        val resolvedVx = collision.resolveX(bounds, velocityX)
-        if (resolvedVx == 0f && velocityX != 0f) {
+        bounds.x += velocity.x * delta
+        val incomingVx = velocity.x
+        collision.resolveX(bounds, velocity)
+        if (velocity.x == 0f && incomingVx != 0f) {
             direction *= -1f // hit a wall
         }
-        velocityX = resolvedVx
 
-        bounds.y += velocityY * delta
-        val (resolvedVy, grounded) = collision.resolveY(bounds, velocityY)
-        velocityY = resolvedVy
+        bounds.y += velocity.y * delta
+        val grounded = collision.resolveY(bounds, velocity)
 
         if (grounded) {
             val aheadX = if (direction > 0f) bounds.x + bounds.width + 1f else bounds.x - 1f

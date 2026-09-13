@@ -1,6 +1,7 @@
 package com.yourgame.mario.physics
 
 import com.badlogic.gdx.math.Rectangle
+import com.badlogic.gdx.math.Vector2
 import kotlin.math.floor
 
 /**
@@ -12,14 +13,16 @@ import kotlin.math.floor
  * implementation did twice per entity, every frame). Doesn't matter much at
  * ~70 tiles for the vertical slice's one level, but it stops collision cost
  * from scaling with level size once real levels are added.
+ *
+ * resolveX/resolveY take the entity's velocity Vector2 and zero out the
+ * relevant axis in place on collision, rather than returning a new value —
+ * so there's nothing to allocate or box per call, and no wrapper result type
+ * needed for resolveY's (velocity, grounded) pair.
  */
 class CollisionHandler(solids: List<Rectangle>, private val tileSize: Float) {
 
     private val tileGrid: Map<Pair<Int, Int>, Rectangle> =
         solids.associateBy { tileCoord(it.x, it.y) }
-
-    // Reused across calls so resolveY doesn't allocate a new boxed result every frame.
-    private val yResolution = YResolution(0f, false)
 
     private fun tileCoord(x: Float, y: Float) =
         floor(x / tileSize).toInt() to floor(y / tileSize).toInt()
@@ -37,18 +40,19 @@ class CollisionHandler(solids: List<Rectangle>, private val tileSize: Float) {
         }
     }
 
-    fun resolveX(bounds: Rectangle, velocityX: Float): Float {
-        if (velocityX == 0f) return 0f
+    /** Zeroes `velocity.x` in place (and snaps `bounds` flush against the tile) on collision. */
+    fun resolveX(bounds: Rectangle, velocity: Vector2) {
+        val vx = velocity.x
+        if (vx == 0f) return
 
-        var corrected = velocityX
-        if (velocityX > 0f) {
+        if (vx > 0f) {
             var nearestRight = Float.POSITIVE_INFINITY
             forEachNearbyTile(bounds) { tile ->
                 if (bounds.overlaps(tile) && tile.x < nearestRight) nearestRight = tile.x
             }
             if (nearestRight != Float.POSITIVE_INFINITY) {
                 bounds.x = nearestRight - bounds.width
-                corrected = 0f
+                velocity.x = 0f
             }
         } else {
             var nearestLeft = Float.NEGATIVE_INFINITY
@@ -57,57 +61,38 @@ class CollisionHandler(solids: List<Rectangle>, private val tileSize: Float) {
             }
             if (nearestLeft != Float.NEGATIVE_INFINITY) {
                 bounds.x = nearestLeft
-                corrected = 0f
+                velocity.x = 0f
             }
         }
-        return corrected
     }
 
-    fun resolveY(bounds: Rectangle, velocityY: Float): YResolution {
-        if (velocityY == 0f) return yResolution.set(0f, false)
+    /** Zeroes `velocity.y` in place on collision; returns whether that collision means "standing on ground". */
+    fun resolveY(bounds: Rectangle, velocity: Vector2): Boolean {
+        val vy = velocity.y
+        if (vy == 0f) return false
 
-        if (velocityY < 0f) {
+        if (vy < 0f) {
             var highestTop = Float.NEGATIVE_INFINITY
             forEachNearbyTile(bounds) { tile ->
                 if (bounds.overlaps(tile) && tile.y + tile.height > highestTop) highestTop = tile.y + tile.height
             }
-            return if (highestTop != Float.NEGATIVE_INFINITY) {
-                bounds.y = highestTop
-                yResolution.set(0f, true)
-            } else {
-                yResolution.set(velocityY, false)
-            }
+            if (highestTop == Float.NEGATIVE_INFINITY) return false
+            bounds.y = highestTop
+            velocity.y = 0f
+            return true
         }
 
         var lowestBottom = Float.POSITIVE_INFINITY
         forEachNearbyTile(bounds) { tile ->
             if (bounds.overlaps(tile) && tile.y < lowestBottom) lowestBottom = tile.y
         }
-        return if (lowestBottom != Float.POSITIVE_INFINITY) {
+        if (lowestBottom != Float.POSITIVE_INFINITY) {
             bounds.y = lowestBottom - bounds.height
-            yResolution.set(0f, false)
-        } else {
-            yResolution.set(velocityY, false)
+            velocity.y = 0f
         }
+        return false
     }
 
     /** A tile is at most `tileSize` wide, so the point can only ever land in one grid cell. */
     fun hasSolidAt(x: Float, y: Float): Boolean = tileGrid[tileCoord(x, y)]?.contains(x, y) ?: false
-}
-
-/**
- * Mutable (velocityY, grounded) pair. A dedicated class rather than
- * Kotlin's `Pair<Float, Boolean>` so CollisionHandler can reuse one instance
- * instead of boxing+allocating a new result every call; supports the same
- * `val (vy, grounded) = ...` destructuring call sites already use.
- */
-class YResolution(var velocityY: Float, var grounded: Boolean) {
-    internal fun set(velocityY: Float, grounded: Boolean): YResolution {
-        this.velocityY = velocityY
-        this.grounded = grounded
-        return this
-    }
-
-    operator fun component1() = velocityY
-    operator fun component2() = grounded
 }
