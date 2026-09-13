@@ -1,118 +1,187 @@
-# Kotlin Mario-Like — Android Vertical Slice
+# Maryou AI
 
-Kotlin + LibGDX platformer targeting **Android only**. Momentum-based
-movement, coyote time + jump buffering, gravity, AABB tile collision, one
-patrol enemy (stomp-kill), coins/score, a Big/Small power state, a
-scroll-following camera, a HUD, pause, win/lose screens — and on-screen touch
-buttons (no keyboard on a phone/tablet).
+A Kotlin + LibGDX Android platformer built as a lightweight, asset-free Mario-inspired adventure. The project has evolved from a small vertical slice into an **endless procedural platforming game** with responsive touch controls, vector artwork, procedural pipes, checkpoints, coins, scoring, power states, camera following, pause/restart/menu UI, and Android landscape support.
 
-## Important: I could not actually build this in my sandbox
+> **Package ID:** `com.maryou.ai`
 
-My execution environment has no internet access and no Android SDK/Gradle
-installed, so I could not run a real build here — I can't honestly claim
-"verified to compile." What I did instead:
+## Current state
 
-- Used LibGDX/Android APIs I'm confident are correct (`AndroidApplication`,
-  `AndroidApplicationConfiguration`, the `gdx-backend-android` /
-  `gdx-platform:natives-*` Maven coordinates, `Viewport.unproject`,
-  `Gdx.input.isTouched(pointer)` / `getX(pointer)` / `getY(pointer)`,
-  `Rectangle.contains(Vector2)`, the AGP 8.x Kotlin DSL `android { }` block
-  shape, etc.)
-- Kept the manifest minimal (no custom `res/` folder needed — it only uses a
-  built-in Android framework theme) to remove one whole category of
-  first-build failure
-- Checked brace/paren balance across every source file
+### Gameplay
 
-But a real Android Studio build is the actual test. If it errors, send me the
-exact message and I'll fix the specific line.
+- Endless procedural side-scrolling world — there is no fixed final level.
+- Deterministic procedural generation with a world seed, giving each run a randomized but reproducible layout.
+- New terrain is generated ahead of the player as they move.
+- Random ground gaps, elevated coin routes, coin clusters, and standing pipe obstacles.
+- Standing pipes are real collision obstacles, not decoration.
+- Automatic forward world generation keeps the adventure going indefinitely.
+- Progressive respawn checkpoints so long runs do not send the player all the way back to the beginning.
+- Coins increase score.
+- Player supports small/big power states.
+- Lives and game-over flow remain in place.
+- Camera follows the player continuously.
 
-## Why rectangles instead of sprites
+### Mobile controls
 
-No image/audio asset files are bundled — entities render as flat colored
-rectangles via `ShapeRenderer` (green = ground, red = player, maroon = enemy,
-gold = coins, gray = touch buttons). Zero missing-asset errors to debug
-before you've even seen it run. Swapping in real sprites is step 4 of the
-original master prompt.
+The game is designed for Android landscape play.
 
-## How to build & run
-
-You need **Android Studio** (bundles the Android SDK) and a device or
-emulator running Android 5.0 (API 21) or newer.
-
-1. Open the `kotlin-mario-game/` folder in Android Studio.
-2. Let it sync Gradle — first sync downloads Kotlin, LibGDX, AGP, and the
-   Android SDK platform/build-tools from Google's and Maven Central's
-   repositories, so it needs internet access on *your* machine (my sandbox
-   has none, which is why I couldn't pre-verify this).
-3. Run the `android` configuration on a connected device/emulator (green
-   Run ▶ button, or `Run > Run 'android'`).
-
-Command line, if you have the Android SDK + a `local.properties` pointing at
-it already set up:
-```bash
-cd kotlin-mario-game
-gradle wrapper --gradle-version 8.7   # one-time, generates gradlew
-./gradlew android:installDebug
-```
-
-## Controls (on-screen, bottom of screen)
-
-| Button | Action |
+| Control | Action |
 |---|---|
-| `<` (bottom-left) | Move left |
-| `>` (bottom-left) | Move right |
-| `JUMP` (bottom-right) | Jump — hold longer for a higher jump |
-| `\|\|` (top-right) | Pause |
+| Left | Move left |
+| Right | Move right |
+| Jump | Jump; hold for a higher jump |
+| Pause | Pause the run |
 
-Multi-touch works, so you can hold a direction and tap jump at once.
+Controls now use a dedicated bottom screen band, keeping the playable world above the controls instead of drawing the buttons over the character. Visual buttons are translucent while their touch hit areas remain comfortably larger for reliable taps.
 
-## Project layout
+The input system polls all available Android touch pointers every frame, allowing direction + jump and other simultaneous touches without sacrificing responsiveness.
 
-```
-kotlin-mario-game/
-├── core/                 # Platform-independent game code (pure Kotlin/JVM)
+## Visual design
+
+The game uses resolution-independent LibGDX `ShapeRenderer` vector primitives instead of bitmap sprites for the core gameplay artwork.
+
+Current vector artwork includes:
+
+- Player character
+- Coins with animated rotation
+- Ground/grass tiles
+- Standing pipe obstacles
+- Direction controls
+- Jump control
+- Pause/restart/menu icons
+- HUD panels
+- Android launcher icon
+
+The palette has been softened into a cohesive blue/green/gold/red theme with translucent UI layers so the controls and HUD blend into the game rather than dominating the scene.
+
+## Android app
+
+- **Application ID:** `com.maryou.ai`
+- **Android namespace:** `com.maryou.ai`
+- **App name:** `Maryou AI`
+- **Minimum Android:** API 21
+- **Compile SDK:** 34
+- **Target SDK:** 34
+- **Java:** 11
+- **Kotlin:** Android/Kotlin DSL setup
+- **LibGDX:** 1.12.1
+- **Supported ABIs:** `armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`
+- **Orientation:** sensor landscape, supporting both landscape rotations
+- **Launcher icon:** custom Android vector drawable
+
+The Android module also contains the LibGDX native extraction task. Native libraries are placed into the correct ABI directory structure before the Android build, preventing the previous `libgdx.so is not an ABI` packaging failure.
+
+## Project structure
+
+```text
+super-mario-ai/
+├── core/
 │   └── src/main/kotlin/com/yourgame/mario/
-│       ├── MarioGame.kt          # Game entry, screen switching
-│       ├── screens/              # MainMenu, Play, GameOver
-│       ├── entities/             # Player, WalkerEnemy, Coin, Entity base
-│       ├── physics/              # Gravity constants, AABB collision resolver
-│       ├── world/                # Level (string-grid tile format)
-│       ├── input/                # InputController interface + TouchInputController
-│       └── ui/                   # HUD
-├── android/              # Android module (LibGDX Android backend)
+│       ├── MarioGame.kt
+│       ├── entities/
+│       │   ├── Entity.kt
+│       │   ├── Player.kt
+│       │   └── Coin.kt
+│       ├── input/
+│       │   ├── InputController.kt
+│       │   └── TouchInputController.kt
+│       ├── physics/
+│       │   ├── Physics.kt
+│       │   └── CollisionHandler.kt
+│       ├── screens/
+│       │   ├── MainMenuScreen.kt
+│       │   ├── PlayScreen.kt
+│       │   └── GameOverScreen.kt
+│       ├── ui/
+│       │   ├── HUD.kt
+│       │   └── VectorArt.kt
+│       └── world/
+│           └── Level.kt
+│
+├── android/
 │   ├── build.gradle.kts
 │   └── src/main/
 │       ├── AndroidManifest.xml
-│       └── kotlin/com/yourgame/mario/android/AndroidLauncher.kt
-└── build.gradle.kts / settings.gradle.kts
+│       ├── kotlin/com/maryou/ai/AndroidLauncher.kt
+│       └── res/drawable/ic_launcher_vector.xml
+│
+├── build.gradle.kts
+├── settings.gradle.kts
+└── README.md
 ```
 
-## Known simplifications vs. the full master prompt
+The Android application/package identity is now `com.maryou.ai`. The existing LibGDX core Kotlin package names are retained for compatibility with the current source tree; changing the Android application ID does not require changing every internal Kotlin package.
 
-- No Tiled `.tmx` maps — `Level.kt` uses a hardcoded string grid. Only one
-  level exists (`Level.level1()`).
-- No sprite animation, no audio, no fire-flower/star power-ups, no boss —
-  these are the "steps 4–9" items from the original master prompt's build
-  order, left for a follow-up pass.
-- No score persistence (save/load) yet.
-- `minSdk 21` / `compileSdk 34` / `targetSdk 34` are reasonable current
-  defaults, but if Android Studio's installed SDK platforms don't include 34
-  it'll prompt you to install it — that's normal, not a bug in the project.
+## Endless world architecture
 
-## Continuous integration
+`Level.kt` no longer contains one fixed hand-authored map. It generates world chunks from a seed as the player approaches unexplored terrain.
 
-`.github/workflows/android-build.yml` builds the debug APK on every push/PR
-via GitHub Actions — it installs its own JDK 17, Android SDK, and a pinned
-Gradle 8.7 (no wrapper needed), then runs `gradle android:assembleDebug` and
-uploads the resulting APK as a downloadable build artifact. Push this repo to
-GitHub and check the **Actions** tab; this is also the fastest way to get a
-real, independent "does it actually compile" answer, since it runs on a full
-Ubuntu machine with real internet access.
+The generator creates:
 
-## If it doesn't build
+1. Ground terrain and occasional short gaps.
+2. Random coin placements.
+3. Elevated coin routes.
+4. Standing pipe obstacles of varying heights.
+5. Additional chunks before the player can reach the end of generated content.
 
-Most likely causes, in rough order of probability: an installed SDK platform
-that doesn't match `compileSdk`/`targetSdk` (Android Studio will offer to
-install the missing one), an AGP/Gradle version mismatch with whatever
-Gradle version Android Studio picks, or a transcription issue in one file.
-Paste me the exact error and I'll fix the specific line.
+`CollisionHandler` supports adding new solid tiles at runtime, so newly generated terrain and pipes immediately become part of the collision grid.
+
+This gives the game an effectively endless adventure without loading a giant map into memory at startup.
+
+## Build
+
+Requirements:
+
+- Android Studio or a compatible Gradle/JDK environment
+- Android SDK with API 34 installed
+- Internet access for the initial dependency download
+
+Typical build command:
+
+```bash
+gradle android:assembleDebug
+```
+
+Install directly to a connected Android device with:
+
+```bash
+gradle android:installDebug
+```
+
+The repository also contains the Android GitHub Actions build workflow for automated APK builds.
+
+## Previous major build fix
+
+The LibGDX Android native packaging pipeline previously produced:
+
+```text
+out/libgdx.so
+```
+
+instead of the required ABI-specific layout. The extraction task was corrected to produce:
+
+```text
+lib/armeabi-v7a/libgdx.so
+lib/arm64-v8a/libgdx.so
+lib/x86/libgdx.so
+lib/x86_64/libgdx.so
+```
+
+That fixed the Android `mergeDebugNativeLibs` failure where Gradle reported that `libgdx.so` was not an ABI. The game was subsequently confirmed working before the current endless-world/UI expansion.
+
+## Design direction
+
+Maryou AI is intentionally staying lightweight:
+
+- Kotlin
+- LibGDX
+- Android
+- Procedural/vector gameplay
+- No large sprite pack required
+- No external database required for the core game
+- No fixed level map required for endless mode
+
+The architecture leaves room for future additions such as audio, more power-ups, bosses, richer procedural structures, saved run statistics, and more advanced enemy AI without replacing the current rendering/input foundation.
+
+## License
+
+This repository is a personal development project. Add a project-specific license here if/when the project is released publicly.
