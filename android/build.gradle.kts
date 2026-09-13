@@ -34,25 +34,55 @@ android {
 
 val gdxVersion = "1.12.1"
 val nativeOutputDir = layout.buildDirectory.dir("generated/jniLibs/main")
-val libGdxNatives by configurations.creating
+
+val nativesArmeabiV7a by configurations.creating
+val nativesArm64V8a by configurations.creating
+val nativesX86 by configurations.creating
+val nativesX86_64 by configurations.creating
 
 dependencies {
     implementation(project(":core"))
     implementation("com.badlogicgames.gdx:gdx-backend-android:$gdxVersion")
-    libGdxNatives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a")
-    libGdxNatives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a")
-    libGdxNatives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86")
-    libGdxNatives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
+
+    nativesArmeabiV7a("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a")
+    nativesArm64V8a("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a")
+    nativesX86("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86")
+    nativesX86_64("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
+}
+
+fun CopySpec.flattenNativeLib() {
+    include("**/libgdx.so")
+    includeEmptyDirs = false
+    eachFile { path = "libgdx.so" }
 }
 
 val copyLibGdxNatives by tasks.registering(Sync::class) {
-    description = "Extract LibGDX native libraries into Android jniLibs."
+    description = "Extract LibGDX natives into the correct Android ABI directories."
     group = "build"
     into(nativeOutputDir)
-    from(libGdxNatives.elements.map { files(it).map { artifact -> zipTree(artifact) } }) {
-        include("**/*.so")
-        includeEmptyDirs = false
-        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    into("armeabi-v7a") {
+        from(nativesArmeabiV7a.map { configuration -> configuration.map { artifact -> zipTree(artifact) } }) {
+            flattenNativeLib()
+        }
+    }
+
+    into("arm64-v8a") {
+        from(nativesArm64V8a.map { configuration -> configuration.map { artifact -> zipTree(artifact) } }) {
+            flattenNativeLib()
+        }
+    }
+
+    into("x86") {
+        from(nativesX86.map { configuration -> configuration.map { artifact -> zipTree(artifact) } }) {
+            flattenNativeLib()
+        }
+    }
+
+    into("x86_64") {
+        from(nativesX86_64.map { configuration -> configuration.map { artifact -> zipTree(artifact) } }) {
+            flattenNativeLib()
+        }
     }
 }
 
