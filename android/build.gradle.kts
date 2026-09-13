@@ -57,6 +57,12 @@ val copyLibGdxNatives by tasks.registering(Sync::class) {
     group = "build"
     into(nativeOutputDir)
 
+    // Each native JAR contains the same filename (libgdx.so) inside its
+    // own ABI-specific archive path. We intentionally flatten that path,
+    // but Gradle 8.7 treats the resulting identical filenames as duplicates.
+    // EXCLUDE is safe here because each ABI is copied into a separate folder.
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     into("armeabi-v7a") {
         from(nativesArmeabiV7a.files.map { zipTree(it) })
         include("**/libgdx.so")
