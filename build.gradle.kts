@@ -5,7 +5,7 @@ plugins {
 }
 
 allprojects {
-    group = "com.jprimero15.maryouai"
+    group = "com.maryou.ai"
     version = "1.0"
 
     repositories {
