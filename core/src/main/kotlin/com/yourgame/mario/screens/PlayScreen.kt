@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Rectangle
@@ -23,22 +24,23 @@ import com.yourgame.mario.ui.VectorArt
 import com.yourgame.mario.world.Level
 
 class PlayScreen(private val game: MarioGame) : Screen {
-    companion object { const val VIEWPORT_WIDTH=800f; const val VIEWPORT_HEIGHT=480f; const val LEVEL_TIME_LIMIT=200 }
-    private val level=Level.level1(); private val collision=CollisionHandler(level.solidTiles,level.tileSize)
-    private val camera=OrthographicCamera(); private val viewport:Viewport=FitViewport(VIEWPORT_WIDTH,VIEWPORT_HEIGHT,camera)
-    private val hudCamera=OrthographicCamera(); private val hudViewport:Viewport=FitViewport(VIEWPORT_WIDTH,VIEWPORT_HEIGHT,hudCamera)
+    companion object { const val VIEWPORT_WIDTH=800f; const val VIEWPORT_HEIGHT=480f; const val LEVEL_TIME_LIMIT=360 }
+    private val level=Level.level1()
+    private val collision=CollisionHandler(level.solidTiles,level.tileSize)
+    private val camera=OrthographicCamera();private val viewport:Viewport=FitViewport(VIEWPORT_WIDTH,VIEWPORT_HEIGHT,camera)
+    private val hudCamera=OrthographicCamera();private val hudViewport:Viewport=FitViewport(VIEWPORT_WIDTH,VIEWPORT_HEIGHT,hudCamera)
     private val input=TouchInputController(hudViewport)
-    private val shapeRenderer=ShapeRenderer(); private val batch=SpriteBatch(); private val font=BitmapFont().apply{data.setScale(1.18f)}; private val hud=HUD(font)
+    private val shapeRenderer=ShapeRenderer();private val batch=SpriteBatch();private val font=BitmapFont();private val hud=HUD(font);private val textLayout=GlyphLayout()
     private val player=Player(level.playerStart.x,level.playerStart.y)
     private val enemies=level.enemySpawns.map{WalkerEnemy(it.x,it.y)}.toMutableList()
     private val coins=level.coinSpawns.map{Coin(it.x,it.y,it.width,it.height)}.toMutableList()
-    private var paused=false; private var elapsedTime=0f; private var levelComplete=false; private var animTime=0f
+    private var paused=false;private var elapsedTime=0f;private var levelComplete=false;private var animTime=0f
 
-    override fun show(){hudCamera.position.set(hudViewport.worldWidth/2f,hudViewport.worldHeight/2f,0f)}
+    override fun show(){hudCamera.position.set(hudViewport.worldWidth/2f,hudViewport.worldHeight/2f,0f);hudCamera.update()}
 
     override fun render(delta:Float){
         val d=delta.coerceIn(0f,1f/30f);input.poll()
-        if(input.isPauseJustPressed() && !levelComplete) paused=!paused
+        if(input.isPauseJustPressed()&&!levelComplete)paused=!paused
         if(paused){if(input.isRestartJustPressed()){restart();return};if(input.isMenuJustPressed()){game.screen=MainMenuScreen(game);dispose();return}}
         if(!paused&&!levelComplete)update(d)
         draw();input.endFrame()
@@ -48,8 +50,7 @@ class PlayScreen(private val game: MarioGame) : Screen {
 
     private fun update(delta:Float){
         elapsedTime+=delta;animTime+=delta
-        val remaining=LEVEL_TIME_LIMIT-elapsedTime.toInt()
-        if(remaining<=0&&!player.isDead)player.killInstantly()
+        if(LEVEL_TIME_LIMIT-elapsedTime.toInt()<=0&&!player.isDead)player.killInstantly()
         player.updatePhysics(delta,input,collision)
         for(e in enemies)if(e.alive)e.updatePhysics(delta,collision)
         handlePlayerEnemyCollisions();handleCoinCollisions()
@@ -76,35 +77,39 @@ class PlayScreen(private val game: MarioGame) : Screen {
         shapeRenderer.end()
 
         shapeRenderer.projectionMatrix=hudCamera.combined;shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        VectorArt.button(shapeRenderer,input.leftButton,input.isLeftPressed(),Color(.08f,.12f,.18f,1f),.32f)
-        VectorArt.button(shapeRenderer,input.rightButton,input.isRightPressed(),Color(.08f,.12f,.18f,1f),.32f)
-        VectorArt.button(shapeRenderer,input.jumpButton,input.isJumpPressed(),Color(.95f,.18f,.08f,1f),.38f)
+        // Soft HUD strip: four equal visual zones keep every label aligned.
+        shapeRenderer.color=Color(0f,0f,0f,.18f);shapeRenderer.rect(10f,425f,780f,47f)
+        shapeRenderer.color=Color(1f,1f,1f,.055f);shapeRenderer.rect(14f,429f,183f,39f);shapeRenderer.rect(203f,429f,183f,39f);shapeRenderer.rect(392f,429f,183f,39f);shapeRenderer.rect(581f,429f,183f,39f)
+        VectorArt.button(shapeRenderer,input.leftButton,input.isLeftPressed(),Color(.08f,.12f,.18f,1f),.22f)
+        VectorArt.button(shapeRenderer,input.rightButton,input.isRightPressed(),Color(.08f,.12f,.18f,1f),.22f)
+        VectorArt.button(shapeRenderer,input.jumpButton,input.isJumpPressed(),Color(.95f,.18f,.08f,1f),.25f)
         VectorArt.pause(shapeRenderer,input.pauseButton,paused)
+        VectorArt.leftIcon(shapeRenderer,Rectangle(input.leftButton.x+13f,input.leftButton.y+10f,30f,30f))
+        VectorArt.rightIcon(shapeRenderer,Rectangle(input.rightButton.x+13f,input.rightButton.y+10f,30f,30f))
+        VectorArt.jumpIcon(shapeRenderer,Rectangle(input.jumpButton.x+12f,input.jumpButton.y+8f,40f,40f))
         if(paused){
-            shapeRenderer.color=Color(.02f,.04f,.08f,.74f);shapeRenderer.rect(0f,0f,800f,480f)
-            shapeRenderer.color=Color(.08f,.12f,.18f,.96f);shapeRenderer.rect(210f,105f,380f,285f)
-            VectorArt.button(shapeRenderer,input.restartButton,input.isRestartJustPressed(),Color(.12f,.20f,.30f,1f),.92f)
-            VectorArt.button(shapeRenderer,input.menuButton,input.isMenuJustPressed(),Color(.12f,.20f,.30f,1f),.92f)
-            VectorArt.playIcon(shapeRenderer,Rectangle(335f,265f,42f,42f))
-            VectorArt.restartIcon(shapeRenderer,Rectangle(267f,171f,42f,42f))
-            VectorArt.homeIcon(shapeRenderer,Rectangle(432f,171f,42f,42f))
+            shapeRenderer.color=Color(.02f,.04f,.08f,.72f);shapeRenderer.rect(0f,0f,800f,480f)
+            shapeRenderer.color=Color(.07f,.10f,.16f,.97f);shapeRenderer.rect(210f,105f,380f,285f)
+            shapeRenderer.color=Color(1f,1f,1f,.06f);shapeRenderer.rect(224f,119f,352f,257f)
+            VectorArt.button(shapeRenderer,input.restartButton,input.isRestartJustPressed(),Color(.12f,.20f,.30f,1f),.82f)
+            VectorArt.button(shapeRenderer,input.menuButton,input.isMenuJustPressed(),Color(.12f,.20f,.30f,1f),.82f)
+            VectorArt.restartIcon(shapeRenderer,Rectangle(267f,171f,42f,42f));VectorArt.homeIcon(shapeRenderer,Rectangle(432f,171f,42f,42f))
         }
         shapeRenderer.end()
 
         batch.projectionMatrix=hudCamera.combined;batch.begin()
         hud.render(batch,player,(LEVEL_TIME_LIMIT-elapsedTime.toInt()).coerceAtLeast(0))
-        font.setColor(Color.WHITE)
-        font.draw(batch,"‹",input.leftButton.x+27f,input.leftButton.y+52f)
-        font.draw(batch,"›",input.rightButton.x+27f,input.rightButton.y+52f)
-        font.draw(batch,"JUMP",input.jumpButton.x+20f,input.jumpButton.y+56f)
-        if(paused){font.getData().setScale(1.7f);font.draw(batch,"PAUSED",330f,335f);font.getData().setScale(1.05f);font.draw(batch,"Game paused",335f,305f);font.draw(batch,"RESTART",294f,190f);font.draw(batch,"MENU",455f,190f)}
-        if(levelComplete){font.getData().setScale(1.35f);font.draw(batch,"LEVEL COMPLETE!",286f,295f);font.getData().setScale(1.05f);font.draw(batch,"Score  ${player.score}   •   Great run!",305f,265f)}
+        if(paused){drawCentered("PAUSED",335f,1.70f,Color.WHITE);drawCentered("Game paused",305f,1.05f,Color(.72f,.82f,.92f,1f));drawCenteredAt("RESTART",326f,190f,1.05f);drawCenteredAt("MENU",470f,190f,1.05f)}
+        if(levelComplete){drawCentered("ADVENTURE COMPLETE!",320f,1.35f,Color.WHITE);drawCenteredAt("Score  ${player.score}   •   Great run!",400f,265f,1.05f)}
         batch.end()
     }
 
+    private fun drawCentered(text:String,y:Float,scale:Float,color:Color){font.data.setScale(scale);font.color=color;textLayout.setText(font,text);font.draw(batch,text,400f-textLayout.width/2f,y)}
+    private fun drawCenteredAt(text:String,centerX:Float,y:Float,scale:Float){font.data.setScale(scale);font.color=Color.WHITE;textLayout.setText(font,text);font.draw(batch,text,centerX-textLayout.width/2f,y)}
+
     override fun resize(width:Int,height:Int){viewport.update(width,height);hudViewport.update(width,height,true)}
-    override fun pause() { paused=true }
-    override fun resume() {}
-    override fun hide() {}
+    override fun pause(){paused=true}
+    override fun resume(){}
+    override fun hide(){}
     override fun dispose(){shapeRenderer.dispose();batch.dispose();font.dispose()}
 }
