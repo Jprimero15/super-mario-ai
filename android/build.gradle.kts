@@ -52,41 +52,37 @@ dependencies {
     nativesX86_64("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
 }
 
-fun CopySpec flattenNativeLibrary() {
-    include("**/libgdx.so")
-    includeEmptyDirs = false
-    eachFile {
-        path = "libgdx.so"
-    }
-}
-
 val copyLibGdxNatives by tasks.registering(Sync::class) {
     description = "Extract LibGDX natives into the correct Android ABI directories."
     group = "build"
     into(nativeOutputDir)
 
     into("armeabi-v7a") {
-        from(nativesArmeabiV7a.files.map { zipTree(it) }) {
-            flattenNativeLibrary()
-        }
+        from(nativesArmeabiV7a.files.map { zipTree(it) })
+        include("**/libgdx.so")
+        includeEmptyDirs = false
+        eachFile { path = "libgdx.so" }
     }
 
     into("arm64-v8a") {
-        from(nativesArm64V8a.files.map { zipTree(it) }) {
-            flattenNativeLibrary()
-        }
+        from(nativesArm64V8a.files.map { zipTree(it) })
+        include("**/libgdx.so")
+        includeEmptyDirs = false
+        eachFile { path = "libgdx.so" }
     }
 
     into("x86") {
-        from(nativesX86.files.map { zipTree(it) }) {
-            flattenNativeLibrary()
-        }
+        from(nativesX86.files.map { zipTree(it) })
+        include("**/libgdx.so")
+        includeEmptyDirs = false
+        eachFile { path = "libgdx.so" }
     }
 
     into("x86_64") {
-        from(nativesX86_64.files.map { zipTree(it) }) {
-            flattenNativeLibrary()
-        }
+        from(nativesX86_64.files.map { zipTree(it) })
+        include("**/libgdx.so")
+        includeEmptyDirs = false
+        eachFile { path = "libgdx.so" }
     }
 }
 
