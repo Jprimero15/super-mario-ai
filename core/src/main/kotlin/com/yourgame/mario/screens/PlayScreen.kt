@@ -36,7 +36,7 @@ class PlayScreen(private val game: MarioGame) : Screen {
     }
 
     private val level = Level.level1()
-    private val collision = CollisionHandler(level.solidTiles)
+    private val collision = CollisionHandler(level.solidTiles, level.tileSize)
 
     private val camera = OrthographicCamera()
     private val viewport: Viewport = FitViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, camera)
