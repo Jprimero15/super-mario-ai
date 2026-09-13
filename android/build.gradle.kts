@@ -56,42 +56,37 @@ dependencies {
  * Extract LibGDX native libraries into the Android jniLibs layout:
  *   generated/jniLibs/main/<abi>/libgdx.so
  *
- * Keep the ABI directories relative to the Sync task's root destination.
- * Do not call resolve() on the Provider<Directory>; Gradle 8.7's Kotlin DSL
- * correctly rejects that because resolve() is a java.io.File extension.
+ * The ABI directory is assigned directly in each FileCopyDetails path so
+ * Android's mergeDebugNativeLibs task cannot mistake the ABI name for a file.
  */
 val copyLibGdxNatives by tasks.registering(Sync::class) {
-    description = "Extract LibGDX natives into the correct Android ABI directories."
+    description = "Extract LibGDX natives into Android ABI directories."
     group = "build"
     into(nativeOutputDir)
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    into("armeabi-v7a") {
-        from(nativesArmeabiV7a.files.map { zipTree(it) })
+    from(nativesArmeabiV7a.files.map { zipTree(it) }) {
         include("**/libgdx.so")
+        eachFile { path = "armeabi-v7a/libgdx.so" }
         includeEmptyDirs = false
-        eachFile { path = "libgdx.so" }
     }
 
-    into("arm64-v8a") {
-        from(nativesArm64V8a.files.map { zipTree(it) })
+    from(nativesArm64V8a.files.map { zipTree(it) }) {
         include("**/libgdx.so")
+        eachFile { path = "arm64-v8a/libgdx.so" }
         includeEmptyDirs = false
-        eachFile { path = "libgdx.so" }
     }
 
-    into("x86") {
-        from(nativesX86.files.map { zipTree(it) })
+    from(nativesX86.files.map { zipTree(it) }) {
         include("**/libgdx.so")
+        eachFile { path = "x86/libgdx.so" }
         includeEmptyDirs = false
-        eachFile { path = "libgdx.so" }
     }
 
-    into("x86_64") {
-        from(nativesX86_64.files.map { zipTree(it) })
+    from(nativesX86_64.files.map { zipTree(it) }) {
         include("**/libgdx.so")
+        eachFile { path = "x86_64/libgdx.so" }
         includeEmptyDirs = false
-        eachFile { path = "libgdx.so" }
     }
 }
 
