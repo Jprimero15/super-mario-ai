@@ -33,9 +33,7 @@ android {
     sourceSets {
         getByName("main") {
             // LibGDX's platform artifacts are JARs containing the native
-            // libraries. The copy task below extracts them into the Android
-            // APK's standard jniLibs directory so System.loadLibrary("gdx")
-            // can resolve libgdx.so at runtime.
+            // libraries. Extract them into Android's standard jniLibs tree.
             jniLibs.srcDir(layout.buildDirectory.dir("generated/jniLibs/main"))
         }
     }
@@ -66,9 +64,16 @@ val copyLibGdxNatives by tasks.registering(Sync::class) {
     description = "Extract LibGDX native libraries into Android jniLibs."
     group = "build"
     into(nativeOutputDir)
-    from(libGdxNatives.map { zipTree(it) }) {
+
+    // Resolve the native configuration as a task input rather than during
+    // project configuration. Gradle 8 otherwise warns about configuration
+    // being resolved during configuration time.
+    from(libGdxNatives.elements.map { files(it).map { artifact -> zipTree(artifact) } }) {
         include("**/*.so")
         includeEmptyDirs = false
+        // Some LibGDX native artifacts can expose the same native entry more
+        // than once. Do not fail the build over identical archive entries.
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     }
 }
 
