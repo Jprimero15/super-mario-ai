@@ -52,15 +52,18 @@ dependencies {
     nativesX86_64("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
 }
 
+/**
+ * Extract LibGDX native libraries into the Android jniLibs layout:
+ *   generated/jniLibs/main/<abi>/libgdx.so
+ *
+ * Keep the ABI directories relative to the Sync task's root destination.
+ * Do not call resolve() on the Provider<Directory>; Gradle 8.7's Kotlin DSL
+ * correctly rejects that because resolve() is a java.io.File extension.
+ */
 val copyLibGdxNatives by tasks.registering(Sync::class) {
     description = "Extract LibGDX natives into the correct Android ABI directories."
     group = "build"
     into(nativeOutputDir)
-
-    // Each native JAR contains the same filename (libgdx.so) inside its
-    // own ABI-specific archive path. We intentionally flatten that path,
-    // but Gradle 8.7 treats the resulting identical filenames as duplicates.
-    // EXCLUDE is safe here because each ABI is copied into a separate folder.
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
     into("armeabi-v7a") {
