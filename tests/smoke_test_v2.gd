@@ -1,13 +1,13 @@
 extends SceneTree
 
 func _init() -> void:
-    var scene := load("res://scenes/main.tscn")
+    var scene: PackedScene = load("res://scenes/main.tscn") as PackedScene
     if scene == null:
         push_error("Maryou smoke test: main scene could not be loaded")
         quit(1)
         return
 
-    var instance := scene.instantiate()
+    var instance: Node = scene.instantiate()
     if instance == null:
         push_error("Maryou smoke test: main scene could not be instantiated")
         quit(1)
