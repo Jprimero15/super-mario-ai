@@ -91,24 +91,27 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$TEMPLATE_DIR"
           curl -fsSL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz" -o /tmp/templates.tpz
           rm -rf /tmp/godot-templates
           mkdir -p /tmp/godot-templates
           unzip -q /tmp/templates.tpz -d /tmp/godot-templates
-          cp -R /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
+          cp -R /tmp/godot-templates/templates/. "$TEMPLATE_DIR/"
+          test -f "$TEMPLATE_DIR/android_source.zip"
+          echo "Installed Android template: $TEMPLATE_DIR/android_source.zip"
 
       - name: Restore C# dependencies
         run: dotnet restore super-mario-ai.csproj
+
+      - name: Build C# project
+        run: dotnet build super-mario-ai.csproj --configuration Debug --no-restore
 
       - name: Validate Godot project
         shell: bash
         run: |
           set -euxo pipefail
           godot --headless --path . --editor --quit
-
-      - name: Build C# project
-        run: dotnet build super-mario-ai.csproj --configuration Debug --no-restore
 
       - name: Export signed Android debug APK
         shell: bash
@@ -118,6 +121,8 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           set -euxo pipefail
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          test -f "$TEMPLATE_DIR/android_source.zip"
           mkdir -p build/android
           godot --headless --path . --install-android-build-template --export-debug "Android Debug" build/android/maryou-ai-debug.apk
           test -s build/android/maryou-ai-debug.apk
