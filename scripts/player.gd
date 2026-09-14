@@ -6,14 +6,19 @@ class_name MaryouPlayer
 @export var terminal_velocity := 1050.0
 @export var jump_velocity := -720.0
 @export var jump_cut_velocity := -260.0
-@export var side_accel := 2100.0
-@export var side_decel := 2600.0
-@export var max_side_speed := 190.0
-@export var coyote_time := 0.12
-@export var jump_buffer_time := 0.14
+@export var side_accel := 2400.0
+@export var side_decel := 3000.0
+@export var max_side_speed := 170.0
+@export var coyote_time := 0.11
+@export var jump_buffer_time := 0.13
 
-const WIDTH := 38.0
-const HEIGHT := 54.0
+# The Maryou atlas is 256x256 with 16 64x64 cells. The visible character is
+# intentionally smaller than a cell, so the gameplay body tracks the sprite's
+# actual torso/feet instead of the full atlas cell.
+const SPRITE_CELL := 64.0
+const WIDTH := 32.0
+const HEIGHT := 50.0
+const BODY_OFFSET_Y := 2.0
 const HIT_INVULNERABILITY := 1.15
 const SPRITE_FRAMES := preload("res://assets/sprites/maryou_frames.tres")
 const GAME_ZOOM := Vector2(1.20, 1.20)
@@ -40,12 +45,14 @@ func _ready() -> void:
 	shape.size = Vector2(WIDTH, HEIGHT)
 	var collider := CollisionShape2D.new()
 	collider.shape = shape
+	collider.position.y = BODY_OFFSET_Y
 	add_child(collider)
 	animated_sprite = AnimatedSprite2D.new()
 	animated_sprite.sprite_frames = SPRITE_FRAMES
 	animated_sprite.animation = &"idle"
 	animated_sprite.position = Vector2(0, -2)
 	animated_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	animated_sprite.speed_scale = 1.0
 	add_child(animated_sprite)
 	camera = Camera2D.new()
 	camera.position = Vector2(250, -30)
@@ -91,6 +98,9 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump_press
 	if right: direction += 1.0
 	direction = clampf(direction, -1.0, 1.0)
 
+	# The game has a forward runner speed. Player input adjusts around that
+	# baseline instead of fighting it, keeping movement responsive to the
+	# character's compact sprite proportions.
 	var desired_x := target_speed + direction * max_side_speed
 	if direction != 0.0:
 		velocity.x = move_toward(velocity.x, desired_x, side_accel * delta)
@@ -119,16 +129,24 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump_press
 		_set_animation("hurt")
 	elif not is_on_floor():
 		_set_animation("jump" if velocity.y < 0.0 else "fall")
-	elif absf(velocity.x - target_speed) > 25.0:
+	elif absf(velocity.x) > 45.0:
 		_set_animation("run")
 	else:
 		_set_animation("idle")
-	if is_instance_valid(animated_sprite) and absf(direction) > 0.01:
-		animated_sprite.flip_h = direction < 0.0
+
+	if is_instance_valid(animated_sprite):
+		if absf(direction) > 0.01:
+			animated_sprite.flip_h = direction < 0.0
+		if last_animation == "run":
+			animated_sprite.speed_scale = clampf(absf(velocity.x) / 180.0, 0.85, 1.75)
+		else:
+			animated_sprite.speed_scale = 1.0
 	queue_redraw()
 
 func _set_animation(name: String) -> void:
-	if not is_instance_valid(animated_sprite) or last_animation == name:
+	if not is_instance_valid(animated_sprite):
+		return
+	if last_animation == name:
 		return
 	last_animation = name
 	animated_sprite.play(name)
