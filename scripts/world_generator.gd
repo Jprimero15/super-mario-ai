@@ -43,6 +43,7 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 	var hole_chance := MaryouDifficultyCurve.hole_chance(distance_steps)
 	var safe_gap_until := start_x + 300.0
 
+	# The opening of every chunk is intentionally safe so the player has time to react.
 	for i in range(20):
 		var x := start_x + float(i) * TILE
 		if x < safe_gap_until:
@@ -67,8 +68,12 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 
 	var pipe_attempts := 1 + int(distance_steps / 500)
 	for i in range(pipe_attempts):
-		var pipe := Rect2(start_x + float(rng.randi_range(6, 18)) * TILE, GROUND_Y - float(rng.randi_range(2, 3)) * TILE, TILE, float(rng.randi_range(2, 3)) * TILE)
-		if _safe(pipe, occupied, holes, 38.0):
+		if rng.randf() > MaryouDifficultyCurve.pipe_chance(distance_steps):
+			continue
+		var pipe := Rect2(start_x + float(rng.randi_range(8, 18)) * TILE, GROUND_Y - float(rng.randi_range(2, 3)) * TILE, TILE, float(rng.randi_range(2, 3)) * TILE)
+		if pipe.position.x < safe_gap_until:
+			continue
+		if _safe(pipe, occupied, holes, 42.0):
 			occupied.append(pipe)
 			root.pipes.append(pipe)
 			_add_solid(root, pipe)
@@ -82,14 +87,29 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 
 	if distance_steps >= 650 and rng.randf() < 0.22:
 		var power_pos := Vector2(start_x + float(rng.randi_range(14, 19)) * TILE, GROUND_Y - 120.0)
-		_add_collectible(root, power_pos, "shield")
+		if _safe(Rect2(power_pos - Vector2(15, 15), Vector2(30, 30)), occupied, holes, 10.0):
+			_add_collectible(root, power_pos, "shield")
 
+	# Enemies are kept off holes/pipes and away from the start of a chunk.
+	# This prevents unfair deaths where a new enemy appears directly in the player's path.
 	var count := MaryouDifficultyCurve.enemy_count(distance_steps)
+	if chunk_index == 0:
+		count = 0
 	for i in range(count):
-		var enemy := EnemyScript.new()
-		enemy.position = Vector2(start_x + float(rng.randi_range(9, 18)) * TILE, GROUND_Y - 40.0)
-		enemy.setup(MaryouDifficultyCurve.enemy_kind(distance_steps, i))
-		enemy_root.add_child(enemy)
+		var placed := false
+		for attempt in range(8):
+			var enemy_x := start_x + float(rng.randi_range(11, 18)) * TILE
+			var enemy_rect := Rect2(enemy_x - 18.0, GROUND_Y - 58.0, 36.0, 58.0)
+			if _safe(enemy_rect, occupied, holes, 48.0):
+				var enemy := EnemyScript.new()
+				enemy.position = Vector2(enemy_x, GROUND_Y - 40.0)
+				enemy.setup(MaryouDifficultyCurve.enemy_kind(distance_steps, i))
+				enemy_root.add_child(enemy)
+				occupied.append(enemy_rect)
+				placed = true
+				break
+		if not placed:
+			continue
 
 func _add_solid(parent: Node2D, rect: Rect2) -> void:
 	var body := StaticBody2D.new()
