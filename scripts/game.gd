@@ -48,11 +48,13 @@ func _ready() -> void:
 	_wire_enemies()
 	queue_redraw()
 
-func _process(delta: float) -> void:
-	if not is_instance_valid(player) or not is_instance_valid(world) or not is_instance_valid(hud): return
+func _physics_process(delta: float) -> void:
+	if not is_instance_valid(player) or not is_instance_valid(world) or not is_instance_valid(hud):
+		return
 	if Input.is_action_just_pressed("pause"):
 		_toggle_pause()
 		return
+
 	var distance: int = maxi(0, int(player.position.x / 32.0))
 	steps = maxi(steps, distance)
 	ScoreManager.steps = steps
@@ -61,66 +63,88 @@ func _process(delta: float) -> void:
 	var right: bool = Input.is_action_pressed("move_right") or _touch_held(1)
 	var jump_held: bool = Input.is_action_pressed("jump") or _touch_held(2)
 	var jump_pressed: bool = Input.is_action_just_pressed("jump") or touch_jump_pressed
-	if jump_pressed and has_node("/root/AudioManager"): AudioManager.play_sfx("jump")
+	if jump_pressed and has_node("/root/AudioManager"):
+		AudioManager.play_sfx("jump")
 	player.tick(delta, speed, left, right, jump_pressed, jump_held)
 	touch_jump_pressed = false
+
 	world.generate_until(player.position.x, steps)
 	_wire_enemies()
 	for child in enemies.get_children():
 		if is_instance_valid(child) and child is MaryouEnemy:
 			var enemy: MaryouEnemy = child as MaryouEnemy
 			enemy.tick(delta, player.position.x)
-	if player.position.y > WORLD_HEIGHT + 80.0: _finish_run()
+
+	if player.position.y > WORLD_HEIGHT + 80.0:
+		_finish_run()
 	hud.update_stats(ScoreManager.score(), ScoreManager.lives, ScoreManager.coins, ScoreManager.multiplier(), MaryouDifficultyCurve.tier_for_steps(steps), int(player.position.x / 32.0))
 	queue_redraw()
 
 func _wire_enemies() -> void:
 	for child in enemies.get_children():
-		if not is_instance_valid(child) or not child is MaryouEnemy: continue
+		if not is_instance_valid(child) or not child is MaryouEnemy:
+			continue
 		var enemy: MaryouEnemy = child as MaryouEnemy
-		if enemy.has_meta("maryou_wired"): continue
+		if enemy.has_meta("maryou_wired"):
+			continue
 		enemy.player_contact.connect(_on_enemy_contact)
 		enemy.stomped.connect(_on_enemy_stomp)
 		enemy.set_meta("maryou_wired", true)
 
-func _on_coin() -> void: ScoreManager.add_coin()
+func _on_coin() -> void:
+	ScoreManager.add_coin()
+
 func _on_shield() -> void:
 	if is_instance_valid(player):
 		player.activate_shield()
-		if has_node("/root/AudioManager"): AudioManager.play_sfx("shield")
-func _on_hazard() -> void: _take_damage()
-func _on_enemy_contact(_enemy: MaryouEnemy) -> void: _take_damage()
+		if has_node("/root/AudioManager"):
+			AudioManager.play_sfx("shield")
+
+func _on_hazard() -> void:
+	_take_damage()
+
+func _on_enemy_contact(_enemy: MaryouEnemy) -> void:
+	_take_damage()
+
 func _on_enemy_stomp(_enemy: MaryouEnemy) -> void:
 	ScoreManager.add_stomp()
-	if is_instance_valid(player): player.shake(5.0, 0.10)
+	if is_instance_valid(player):
+		player.shake(5.0, 0.10)
 	_juice(0.06, 0.88)
 
 func _take_damage() -> void:
-	if hit_lock or ScoreManager.lives <= 0 or not is_instance_valid(player) or player.dead: return
+	if hit_lock or ScoreManager.lives <= 0 or not is_instance_valid(player) or player.dead:
+		return
 	hit_lock = true
 	if player.take_hit():
 		var dead_now: bool = ScoreManager.damage()
-		if dead_now: _finish_run()
+		if dead_now:
+			_finish_run()
 		else:
 			player.position += Vector2(110.0, -60.0)
 			player.velocity = Vector2(MaryouDifficultyCurve.speed_for_steps(steps) * 0.75, -360.0)
 			_juice(0.08, 0.82)
-	else: _juice(0.05, 0.9)
+	else:
+		_juice(0.05, 0.9)
 	await get_tree().create_timer(1.15, true, false, true).timeout
 	hit_lock = false
 
 func _finish_run() -> void:
-	if not is_instance_valid(player) or player.dead: return
+	if not is_instance_valid(player) or player.dead:
+		return
 	ScoreManager.finish_run()
 	player.kill()
 	get_tree().paused = false
-	if is_instance_valid(hud): hud.show_game_over(ScoreManager.score(), ScoreManager.best_score)
+	if is_instance_valid(hud):
+		hud.show_game_over(ScoreManager.score(), ScoreManager.best_score)
 
 func _toggle_pause() -> void:
-	if not is_instance_valid(player) or player.dead: return
+	if not is_instance_valid(player) or player.dead:
+		return
 	var value: bool = not get_tree().paused
 	get_tree().paused = value
-	if is_instance_valid(hud): hud.show_pause(value, ScoreManager.score(), ScoreManager.best_score)
+	if is_instance_valid(hud):
+		hud.show_pause(value, ScoreManager.score(), ScoreManager.best_score)
 
 func _restart() -> void:
 	get_tree().paused = false
@@ -132,7 +156,8 @@ func _back_from_overlay() -> void:
 
 func _touch_held(zone: int) -> bool:
 	for value in touch_points.values():
-		if int(value) == zone: return true
+		if int(value) == zone:
+			return true
 	return false
 
 func _input(event: InputEvent) -> void:
@@ -142,17 +167,24 @@ func _input(event: InputEvent) -> void:
 		if event.pressed:
 			var zone: int = 2
 			if p.y >= size.y * 0.78:
-				if p.x < size.x * 0.22: zone = 0
-				elif p.x < size.x * 0.46: zone = 1
+				if p.x < size.x * 0.22:
+					zone = 0
+				elif p.x < size.x * 0.46:
+					zone = 1
 				touch_points[event.index] = zone
-				if zone == 2: touch_jump_pressed = true
-		else: touch_points.erase(event.index)
+				if zone == 2:
+					touch_jump_pressed = true
+		else:
+			touch_points.erase(event.index)
 	elif event is InputEventScreenDrag and touch_points.has(event.index):
 		var size: Vector2 = get_viewport_rect().size
 		if event.position.y >= size.y * 0.78:
-			if event.position.x < size.x * 0.22: touch_points[event.index] = 0
-			elif event.position.x < size.x * 0.46: touch_points[event.index] = 1
-			else: touch_points[event.index] = 2
+			if event.position.x < size.x * 0.22:
+				touch_points[event.index] = 0
+			elif event.position.x < size.x * 0.46:
+				touch_points[event.index] = 1
+			else:
+				touch_points[event.index] = 2
 
 func _juice(duration: float, time_scale: float) -> void:
 	Engine.time_scale = time_scale
@@ -163,12 +195,10 @@ func _draw() -> void:
 	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
 	var biome: int = mini(steps / 500, 2)
 	var source_x: float = float(biome) * 256.0
-	# Use the new 3-strip background as a large repeating parallax-style backdrop.
 	var first_x: float = floorf((cam_x - 1600.0) / BACKDROP_WIDTH) * BACKDROP_WIDTH
 	for i in range(6):
 		var x: float = first_x + float(i) * BACKDROP_WIDTH
 		draw_texture_rect_region(BACKGROUNDS, Rect2(x, -40.0, BACKDROP_WIDTH, 720.0), Rect2(source_x, 0.0, 256.0, 256.0))
-	# Tile the playable ground with the new grass/soil tile instead of flat colors.
 	var ground_start: float = floorf((cam_x - 1700.0) / 32.0) * 32.0
 	for i in range(108):
 		var x: float = ground_start + float(i) * 32.0
