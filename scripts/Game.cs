@@ -1,5 +1,6 @@
 using Godot;
 
+[GlobalClass]
 public partial class Game : Node2D
 {
     private readonly Texture2D _backgrounds = GD.Load<Texture2D>("res://assets/world/backgrounds.svg");
