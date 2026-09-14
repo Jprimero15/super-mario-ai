@@ -5,7 +5,7 @@ signal pause_pressed
 signal restart_pressed
 signal back_pressed
 
-var score_label: Label
+var steps_label: Label
 var status_label: Label
 var tier_label: Label
 var overlay: ColorRect
@@ -41,14 +41,14 @@ func _build() -> void:
 	var stats := VBoxContainer.new()
 	stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_row.add_child(stats)
-	score_label = _label("SCORE 0", 26)
-	stats.add_child(score_label)
-	status_label = _label("LIVES 3   COINS 0   ×1", 17)
+	steps_label = _label("STEPS 0", 26)
+	stats.add_child(steps_label)
+	status_label = _label("COINS 0", 17)
 	stats.add_child(status_label)
 	var right := VBoxContainer.new()
 	right.custom_minimum_size = Vector2(170, 0)
 	top_row.add_child(right)
-	tier_label = _label("TIER 1   0m", 17)
+	tier_label = _label("TIER 1", 17)
 	tier_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	right.add_child(tier_label)
 	var pause := _button("PAUSE", 46)
@@ -174,25 +174,25 @@ func _add_button(parent: VBoxContainer, text: String, callback: Callable) -> voi
 	button.pressed.connect(callback)
 	parent.add_child(button)
 
-func show_pause(value: bool, score: int, best: int) -> void:
+func show_pause(value: bool, steps: int, best_steps: int) -> void:
 	if settings_panel.visible: settings_panel.visible = false
 	overlay.visible = value
 	panel.visible = value
 	title_label.text = "PAUSED"
-	info_label.text = "Score %d   Best %d" % [score, best]
+	info_label.text = "Steps %d   Best %d" % [steps, best_steps]
 	_animate_panel(value)
 
-func show_game_over(score: int, best: int) -> void:
+func show_game_over(steps: int, best_steps: int) -> void:
 	overlay.visible = true
 	panel.visible = true
 	title_label.text = "RUN COMPLETE"
-	info_label.text = "Score %d   Best %d" % [score, best]
+	info_label.text = "Steps %d   Best %d" % [steps, best_steps]
 	_animate_panel(true)
 
-func update_stats(score: int, lives: int, coins: int, combo: int, tier: int, meters: int) -> void:
-	score_label.text = "SCORE %d" % score
-	status_label.text = "LIVES %d   COINS %d   ×%d" % [lives, coins, maxi(1, combo)]
-	tier_label.text = "TIER %d   %dm" % [tier, meters]
+func update_stats(steps: int, coins: int, tier: int) -> void:
+	steps_label.text = "STEPS %d" % steps
+	status_label.text = "COINS %d" % coins
+	tier_label.text = "TIER %d" % tier
 
 func _show_settings(value: bool) -> void:
 	settings_panel.visible = value
