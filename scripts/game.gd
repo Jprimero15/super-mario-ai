@@ -3,8 +3,12 @@ extends Node2D
 const PlayerScene = preload("res://scripts/player.gd")
 const WorldScene = preload("res://scripts/world_generator.gd")
 const HUDScene = preload("res://scripts/hud.gd")
+const BACKGROUNDS := preload("res://assets/world/backgrounds.svg")
+const TILES := preload("res://assets/world/tiles.svg")
 const WORLD_HEIGHT: float = 720.0
 const GROUND_Y: float = 560.0
+const VIEW_WIDTH: float = 1280.0
+const BACKDROP_WIDTH: float = 720.0
 
 var player: MaryouPlayer
 var world: MaryouWorldGenerator
@@ -17,7 +21,6 @@ var touch_jump_pressed: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
-	# Landscape-only, but allow both normal and reverse landscape orientations.
 	if OS.has_feature("android"):
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
 	ScoreManager.reset_run()
@@ -158,22 +161,17 @@ func _juice(duration: float, time_scale: float) -> void:
 	Engine.time_scale = 1.0
 
 func _draw() -> void:
-	# Calm forest backdrop: sky, layered tree line, distant hills, and a grassy running land.
 	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
-	draw_rect(Rect2(cam_x - 1600.0, -400.0, 4200.0, 1000.0), Color("#9bd7c0"))
-	# distant hills
-	for i in range(12):
-		var hx: float = cam_x - 1500.0 + float(i) * 280.0
-		var hy: float = 430.0 + sin(float(i) * 1.7) * 28.0
-		draw_circle(Vector2(hx, hy), 150.0, Color("#78b99d"))
-	# forest canopy silhouettes
-	for i in range(18):
-		var tx: float = cam_x - 1500.0 + float(i) * 175.0
-		var ty: float = 475.0 + sin(float(i) * 1.3) * 22.0
-		draw_rect(Rect2(tx - 9.0, ty, 18.0, 105.0), Color("#4d7d5e"))
-		draw_circle(Vector2(tx, ty), 58.0, Color("#35664b"))
-		draw_circle(Vector2(tx - 35.0, ty + 20.0), 42.0, Color("#407657"))
-		draw_circle(Vector2(tx + 34.0, ty + 18.0), 44.0, Color("#407657"))
-	# playable land under the character
-	draw_rect(Rect2(cam_x - 1600.0, GROUND_Y + 32.0, 4200.0, 200.0), Color("#5b3f2b"))
-	draw_rect(Rect2(cam_x - 1600.0, GROUND_Y + 32.0, 4200.0, 18.0), Color("#6ea34d"))
+	var biome := mini(steps / 500, 2)
+	var source_x := float(biome) * 256.0
+	# Use the new 3-strip background as a large repeating parallax-style backdrop.
+	var first_x := floor((cam_x - 1600.0) / BACKDROP_WIDTH) * BACKDROP_WIDTH
+	for i in range(6):
+		var x := first_x + float(i) * BACKDROP_WIDTH
+		draw_texture_rect_region(BACKGROUNDS, Rect2(x, -40.0, BACKDROP_WIDTH, 720.0), Rect2(source_x, 0.0, 256.0, 256.0))
+	# Tile the playable ground with the new grass/soil tile instead of flat colors.
+	var ground_start := floor((cam_x - 1700.0) / 32.0) * 32.0
+	for i in range(108):
+		var x := ground_start + float(i) * 32.0
+		draw_texture_rect_region(TILES, Rect2(x, GROUND_Y + 32.0, 32.0, 32.0), Rect2(0.0, 0.0, 64.0, 64.0))
+		draw_texture_rect_region(TILES, Rect2(x, GROUND_Y, 32.0, 32.0), Rect2(0.0, 0.0, 64.0, 32.0))
