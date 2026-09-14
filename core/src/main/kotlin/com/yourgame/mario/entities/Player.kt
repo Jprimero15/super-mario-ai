@@ -4,8 +4,10 @@ import com.yourgame.mario.input.InputController
 import com.yourgame.mario.physics.CollisionHandler
 import com.yourgame.mario.physics.Physics
 
+// Player size is used by damage progression without requiring sprite assets.
 enum class PlayerSize(val width: Float, val height: Float) {
-    SMALL(28f, 28f), BIG(28f, 56f)
+    SMALL(28f, 28f),
+    BIG(28f, 56f)
 }
 
 class Player(startX: Float, startY: Float) :
@@ -15,8 +17,6 @@ class Player(startX: Float, startY: Float) :
         const val BASE_RUN_SPEED = 250f
         const val SPEED_PER_100_STEPS = 16f
         const val MAX_RUN_SPEED = 430f
-        const val ACCEL = 1800f
-        const val FRICTION = 1800f
         const val JUMP_VELOCITY = 500f
         const val MIN_JUMP_VELOCITY = 190f
         const val COYOTE_TIME = 0.12f
@@ -49,7 +49,7 @@ class Player(startX: Float, startY: Float) :
         if (size == PlayerSize.SMALL) {
             size = PlayerSize.BIG
             bounds.height = size.height
-            bounds.y -= (PlayerSize.BIG.height - PlayerSize.SMALL.height)
+            bounds.y -= PlayerSize.BIG.height - PlayerSize.SMALL.height
         }
     }
 
@@ -59,7 +59,9 @@ class Player(startX: Float, startY: Float) :
             bounds.height = size.height
             startInvincibility()
             false
-        } else true
+        } else {
+            true
+        }
     }
 
     fun startInvincibility(duration: Float = 1.5f) {
@@ -67,9 +69,15 @@ class Player(startX: Float, startY: Float) :
         invincibleTimer = duration
     }
 
+    /** Marks the run as dead and gives a small, predictable fall animation. */
     fun killInstantly() {
+        if (isDead) return
         isDead = true
-        velocity.set(0f, JUMP_VELOCITY * 0.6f)
+        jumpHeld = false
+        coyoteTimer = 0f
+        jumpBufferTimer = 0f
+        velocity.x = 0f
+        velocity.y = -240f
     }
 
     fun resetTo(x: Float, y: Float) {
@@ -77,13 +85,16 @@ class Player(startX: Float, startY: Float) :
         bounds.x = x
         bounds.y = y
         velocity.setZero()
+        onGround = false
+        jumpHeld = false
+        coyoteTimer = 0f
+        jumpBufferTimer = 0f
         startInvincibility(2f)
     }
 
     fun updatePhysics(delta: Float, input: InputController, collision: CollisionHandler, steps: Int) {
         if (isDead) return
 
-        // Auto-run: forward motion is continuous. Left/right remains available for steering.
         val steer = when {
             input.isLeftPressed() -> -1f
             input.isRightPressed() -> 1f
