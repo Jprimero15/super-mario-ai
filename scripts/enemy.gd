@@ -13,7 +13,6 @@ var defeated := false
 var base_y := 0.0
 var phase := 0.0
 var hit_area: Area2D
-var shielded := false
 var patrol_origin := 0.0
 var animated_sprite: AnimatedSprite2D
 
@@ -22,7 +21,6 @@ func setup(enemy_kind: int) -> void:
 	var sizes := [30.0, 34.0, 32.0, 36.0, 31.0, 33.0]
 	size = sizes[kind]
 	speed = MaryouDifficultyCurve.enemy_speed(kind, MaryouDifficultyCurve.tier_for_steps(int(position.x / 32.0)))
-	shielded = kind == 3
 	collision_layer = 4
 	collision_mask = 2
 	var shape := RectangleShape2D.new()
@@ -90,14 +88,11 @@ func _on_player_entered(body: Node2D) -> void:
 	if defeated or not body is MaryouPlayer: return
 	var player := body as MaryouPlayer
 	if player.velocity.y > 50.0 and player.position.y < position.y - 8.0:
-		if shielded:
-			player.velocity.y = -330.0
-			player.take_hit()
-			return
 		defeat()
 		player.velocity.y = -400.0
 		stomped.emit(self)
-	else: player_contact.emit(self)
+	else:
+		player_contact.emit(self)
 
 func defeat() -> void:
 	if defeated: return
@@ -105,4 +100,3 @@ func defeat() -> void:
 	if is_instance_valid(hit_area): hit_area.set_deferred("monitoring", false)
 	velocity = Vector2(velocity.x * 0.2, -330.0)
 	if is_instance_valid(animated_sprite): animated_sprite.pause()
-
