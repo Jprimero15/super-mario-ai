@@ -72,12 +72,6 @@ jobs:
           unzip -q /tmp/templates.tpz -d /tmp/godot-templates
           cp -R /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
 
-      - name: Install Android Gradle build template
-        shell: bash
-        run: |
-          set -euxo pipefail
-          godot --headless --path . --install-android-build-template --quit
-
       - name: Validate Godot project
         shell: bash
         run: |
@@ -99,7 +93,7 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p build/android
-          godot --headless --path . --export-debug "Android Debug" build/android/maryou-ai-debug.apk
+          godot --headless --path . --install-android-build-template --export-debug "Android Debug" build/android/maryou-ai-debug.apk
           test -s build/android/maryou-ai-debug.apk
 
       - name: Verify APK signature
