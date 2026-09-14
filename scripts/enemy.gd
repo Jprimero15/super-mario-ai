@@ -6,6 +6,10 @@ signal stomped(enemy: MaryouEnemy)
 
 const SPRITE_FRAMES := preload("res://assets/sprites/enemy_frames.tres")
 const ENEMY_NAMES := ["fire", "water", "thunder", "shadow"]
+const GROUND_Y := 560.0
+const GROUND_ACCEL := 520.0
+const AIR_ACCEL := 420.0
+const TURN_EPSILON := 4.0
 
 var kind := 0
 var speed := 70.0
@@ -71,32 +75,56 @@ func tick(delta: float, player_x: float) -> void:
 	hurt_timer = maxf(hurt_timer - delta, 0.0)
 	phase += delta * (0.8 + speed / 320.0)
 
-	var direction := signf(player_x - position.x)
-	if is_zero_approx(direction): direction = 1.0
+	var desired_x := 0.0
+	var facing_direction := 1.0
 
 	match kind:
 		0, 3:
+			# Ground enemies use a smooth patrol target instead of changing
+			# velocity direction instantly when the sine target crosses them.
 			var target_x := patrol_origin + sin(phase) * patrol_range
-			direction = signf(target_x - position.x)
-			if is_zero_approx(direction): direction = 1.0
-			velocity.x = direction * speed * (0.72 if kind == 3 else 1.0)
+			var delta_x := target_x - position.x
+			if absf(delta_x) > TURN_EPSILON:
+				desired_x = signf(delta_x) * speed * (0.72 if kind == 3 else 1.0)
+			else:
+				desired_x = 0.0
+			if absf(velocity.x) > 8.0:
+				facing_direction = signf(velocity.x)
+			elif absf(delta_x) > TURN_EPSILON:
+				facing_direction = signf(delta_x)
+			velocity.x = move_toward(velocity.x, desired_x, GROUND_ACCEL * delta)
 			velocity.y += 1500.0 * delta
 		1:
-			velocity.x = direction * speed * 0.65
+			# Water enemies hover vertically but follow the player smoothly.
+			var player_delta := player_x - position.x
+			if absf(player_delta) > TURN_EPSILON:
+				desired_x = signf(player_delta) * speed * 0.65
+			velocity.x = move_toward(velocity.x, desired_x, AIR_ACCEL * delta)
 			var target_y := base_y - absf(sin(phase)) * 75.0
-			velocity.y = (target_y - position.y) * 8.0
+			velocity.y = move_toward(velocity.y, (target_y - position.y) * 8.0, 900.0 * delta)
+			if absf(velocity.x) > 8.0:
+				facing_direction = signf(velocity.x)
+			elif absf(player_delta) > TURN_EPSILON:
+				facing_direction = signf(player_delta)
 		2:
+			# Thunder patrols until the player is nearby, then smoothly chases.
 			var target_x := patrol_origin + sin(phase) * patrol_range
-			var patrol_direction := signf(target_x - position.x)
-			if absf(player_x - position.x) < 240.0:
-				patrol_direction = direction
-			if is_zero_approx(patrol_direction): patrol_direction = 1.0
-			velocity.x = patrol_direction * (speed + (55.0 if absf(player_x - position.x) < 240.0 else 0.0))
+			var delta_x := target_x - position.x
+			var player_delta := player_x - position.x
+			if absf(player_delta) < 240.0:
+				delta_x = player_delta
+			if absf(delta_x) > TURN_EPSILON:
+				desired_x = signf(delta_x) * (speed + (55.0 if absf(player_delta) < 240.0 else 0.0))
+			if absf(velocity.x) > 8.0:
+				facing_direction = signf(velocity.x)
+			elif absf(delta_x) > TURN_EPSILON:
+				facing_direction = signf(delta_x)
+			velocity.x = move_toward(velocity.x, desired_x, GROUND_ACCEL * delta)
 			velocity.y += 1500.0 * delta
 
 	move_and_slide()
 	if is_instance_valid(animated_sprite):
-		animated_sprite.flip_h = direction < 0.0
+		animated_sprite.flip_h = facing_direction < 0.0
 		_update_animation(delta, player_x)
 
 func _update_animation(_delta: float, player_x: float) -> void:
