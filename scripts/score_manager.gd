@@ -3,7 +3,6 @@ extends Node
 var steps := 0
 var coins := 0
 var combo := 0
-var lives := 3
 var best_score := 0
 var run_active := false
 
@@ -14,7 +13,6 @@ func reset_run() -> void:
 	steps = 0
 	coins = 0
 	combo = 0
-	lives = 3
 	run_active = true
 
 func add_coin() -> void:
@@ -25,13 +23,6 @@ func add_coin() -> void:
 func add_stomp() -> void:
 	combo += 1
 	if has_node("/root/AudioManager"): AudioManager.play_sfx("stomp")
-
-func damage() -> bool:
-	if lives <= 0: return false
-	lives -= 1
-	combo = 0
-	if has_node("/root/AudioManager"): AudioManager.play_sfx("hit")
-	return lives <= 0
 
 func multiplier() -> int:
 	return clampi(1 + int(combo / 5), 1, 9)
