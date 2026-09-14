@@ -64,16 +64,24 @@ jobs:
         run: |
           set -euxo pipefail
           curl -fsSL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip" -o /tmp/godot.zip
-          rm -rf /tmp/godot
-          mkdir -p /tmp/godot
+          rm -rf /tmp/godot /opt/godot
+          mkdir -p /tmp/godot /opt/godot
           unzip -q /tmp/godot.zip -d /tmp/godot
-          GODOT_BIN="$(find /tmp/godot -maxdepth 2 -type f -name 'Godot_v*-stable_mono_linux.x86_64' -print -quit)"
-          if [ -z "$GODOT_BIN" ]; then
-            echo "ERROR: Godot .NET executable not found in archive"
-            find /tmp/godot -maxdepth 3 -type f -print
+
+          GODOT_BIN="$(find /tmp/godot -type f -name 'Godot_v*-stable_mono_linux.x86_64' -print -quit)"
+          GODOT_SHARP="$(find /tmp/godot -type d -name 'GodotSharp' -print -quit)"
+          if [ -z "$GODOT_BIN" ] || [ -z "$GODOT_SHARP" ]; then
+            echo "ERROR: Godot .NET runtime files not found in archive"
+            find /tmp/godot -maxdepth 4 -type f -o -type d -name 'GodotSharp'
             exit 1
           fi
-          sudo install -m 0755 "$GODOT_BIN" /usr/local/bin/godot
+
+          GODOT_ROOT="$(dirname "$GODOT_SHARP")"
+          sudo cp -a "$GODOT_ROOT/." /opt/godot/
+          sudo chmod +x "$GODOT_BIN"
+          INSTALLED_BIN="$(find /opt/godot -maxdepth 2 -type f -name 'Godot_v*-stable_mono_linux.x86_64' -print -quit)"
+          sudo ln -sf "$INSTALLED_BIN" /usr/local/bin/godot
+          test -d /opt/godot/GodotSharp/Api/Debug
           godot --version
 
       - name: Install matching .NET export templates
@@ -82,6 +90,8 @@ jobs:
           set -euxo pipefail
           mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
           curl -fsSL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz" -o /tmp/templates.tpz
+          rm -rf /tmp/godot-templates
+          mkdir -p /tmp/godot-templates
           unzip -q /tmp/templates.tpz -d /tmp/godot-templates
           cp -R /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
 
