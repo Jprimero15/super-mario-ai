@@ -106,6 +106,7 @@ func _on_coin() -> void:
 
 func _on_hazard(_player: MaryouPlayer) -> void:
 	_juice(0.04, 0.94)
+	_finish_run()
 
 func _on_checkpoint_reached(_position: Vector2) -> void:
 	if is_instance_valid(hud):
@@ -133,7 +134,7 @@ func _take_damage() -> void:
 	hit_lock = false
 
 func _finish_run() -> void:
-	if not is_instance_valid(player) or player.dead:
+	if not is_instance_valid(player) or player.dead or not ScoreManager.run_active:
 		return
 	ScoreManager.finish_run()
 	player.kill()
