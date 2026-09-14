@@ -57,7 +57,7 @@ func _process(delta: float) -> void:
 	if paused or game_over:
 		queue_redraw()
 		return
-	 speed = min(520.0, 300.0 + float(steps / 100) * 22.0)
+	speed = min(520.0, 300.0 + float(steps / 100) * 22.0)
 	var jump_pressed := Input.is_action_pressed("jump") or touch_jump
 	var left := Input.is_action_pressed("move_left") or touch_left
 	var right := Input.is_action_pressed("move_right") or touch_right
