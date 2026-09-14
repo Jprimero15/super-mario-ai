@@ -10,10 +10,13 @@ func _initialize() -> void:
 	var speed_b := MaryouDifficultyCurve.speed_for_steps(900)
 	if speed_b <= speed_a:
 		failures.append("speed curve is not increasing")
-	if MaryouDifficultyCurve.hole_chance(0) >= MaryouDifficultyCurve.hole_chance(1800):
-		pass
-	else:
+	if MaryouDifficultyCurve.hole_chance(1800) <= MaryouDifficultyCurve.hole_chance(0):
 		failures.append("hole curve is not increasing")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 12345
+	var first_kind := MaryouDifficultyCurve.enemy_kind(1500, 0, rng)
+	if first_kind < 0 or first_kind > 5:
+		failures.append("enemy kind range")
 	var player := MaryouPlayer.new()
 	if player == null:
 		failures.append("player creation")
