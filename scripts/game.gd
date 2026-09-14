@@ -32,7 +32,6 @@ func _ready() -> void:
 	add_child(world)
 	world.setup(enemies)
 	world.coin_collected.connect(_on_coin)
-	world.shield_collected.connect(_on_shield)
 	world.hazard_hit.connect(_on_hazard)
 	player = PlayerScene.new()
 	player.name = "Player"
@@ -95,12 +94,6 @@ func _wire_enemies() -> void:
 
 func _on_coin() -> void:
 	ScoreManager.add_coin()
-
-func _on_shield() -> void:
-	if is_instance_valid(player):
-		player.activate_shield()
-		if has_node("/root/AudioManager"):
-			AudioManager.play_sfx("shield")
 
 func _on_hazard(_player: MaryouPlayer) -> void:
 	# Hazard scenes already call player.take_damage(1). Keep this signal for shared feedback only.
@@ -189,8 +182,11 @@ func _juice(duration: float, time_scale: float) -> void:
 
 func _draw() -> void:
 	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
-	var biome: int = mini(steps / 500, 2)
-	var source_x: float = float(biome) * 256.0
+	# One 1024x256 texture contains four 256x256 seasonal tiles.
+	# Rotate seasons every 500 distance steps so the endless runner cycles
+	# spring -> summer -> autumn -> winter and then repeats.
+	var season: int = posmod(steps / 500, 4)
+	var source_x: float = float(season) * 256.0
 	var first_x: float = floorf((cam_x - 1600.0) / BACKDROP_WIDTH) * BACKDROP_WIDTH
 	for i in range(6):
 		var x: float = first_x + float(i) * BACKDROP_WIDTH
