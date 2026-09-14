@@ -179,7 +179,7 @@ func _draw() -> void:
 			draw_set_transform(Vector2(x, -40.0), 0.0, Vector2.ONE)
 		else:
 			draw_set_transform(Vector2(x + BACKDROP_WIDTH, -40.0), 0.0, Vector2(-1.0, 1.0))
-		draw_texture_rect_region(Rect2(0.0, 0.0, BACKDROP_WIDTH, 720.0), BACKGROUNDS, Rect2(source_x, 0.0, BACKGROUND_TILE_SIZE, BACKGROUND_TILE_SIZE))
+		draw_texture_rect_region(BACKGROUNDS, Rect2(0.0, 0.0, BACKDROP_WIDTH, 720.0), Rect2(source_x, 0.0, BACKGROUND_TILE_SIZE, BACKGROUND_TILE_SIZE))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	var first_visible_x: float = cam_x - 1700.0
@@ -193,8 +193,4 @@ func _draw() -> void:
 		for solid in chunk.solids:
 			if solid.end.x < first_visible_x or solid.position.x > last_visible_x:
 				continue
-			draw_texture_rect_region(
-				solid,
-				TILES,
-				Rect2(0.0, 0.0, 64.0, 64.0)
-			)
+			draw_texture_rect_region(TILES, solid, Rect2(0.0, 0.0, 64.0, 64.0))
