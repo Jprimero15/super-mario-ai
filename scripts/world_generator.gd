@@ -29,8 +29,7 @@ func generate_until(player_x: float, distance_steps: int) -> void:
 	_prune(player_x)
 
 func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
-	if active_chunks.has(chunk_index):
-		return
+	if active_chunks.has(chunk_index): return
 	var root := ChunkScript.new()
 	root.name = "Chunk_%d" % chunk_index
 	add_child(root)
@@ -43,11 +42,9 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 	var hole_chance := MaryouDifficultyCurve.hole_chance(distance_steps)
 	var safe_gap_until := start_x + 300.0
 
-	# The opening of every chunk is intentionally safe so the player has time to react.
 	for i in range(20):
 		var x := start_x + float(i) * TILE
-		if x < safe_gap_until:
-			continue
+		if x < safe_gap_until: continue
 		if i > 7 and i < 19 and rng.randf() < hole_chance:
 			var width := float(rng.randi_range(32, 64))
 			var hole := Rect2(x, GROUND_Y, width, TILE)
@@ -58,31 +55,38 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 		var tile := Rect2(start_x + float(i) * TILE, GROUND_Y, TILE, TILE)
 		var blocked := false
 		for hole in holes:
-			if tile.intersects(hole):
-				blocked = true
-				break
+			if tile.intersects(hole): blocked = true; break
 		if not blocked:
 			_add_solid(root, tile)
 			root.solids.append(tile)
 	root.holes = holes
 
+	# Pipes are a core obstacle again. Later chunks get a strong chance of at least one.
 	var pipe_attempts := 1 + int(distance_steps / 500)
+	var pipes_placed := 0
 	for i in range(pipe_attempts):
-		if rng.randf() > MaryouDifficultyCurve.pipe_chance(distance_steps):
-			continue
-		var pipe := Rect2(start_x + float(rng.randi_range(8, 18)) * TILE, GROUND_Y - float(rng.randi_range(2, 3)) * TILE, TILE, float(rng.randi_range(2, 3)) * TILE)
-		if pipe.position.x < safe_gap_until:
-			continue
+		if rng.randf() > MaryouDifficultyCurve.pipe_chance(distance_steps): continue
+		var pipe := Rect2(start_x + float(rng.randi_range(9, 18)) * TILE, GROUND_Y - float(rng.randi_range(2, 3)) * TILE, TILE, float(rng.randi_range(2, 3)) * TILE)
+		if pipe.position.x < safe_gap_until: continue
 		if _safe(pipe, occupied, holes, 42.0):
 			occupied.append(pipe)
 			root.pipes.append(pipe)
 			_add_solid(root, pipe)
 			_add_hazard(root, pipe)
+			pipes_placed += 1
+	if chunk_index > 0 and pipes_placed == 0 and rng.randf() < 0.78:
+		var fallback := Rect2(start_x + float(rng.randi_range(13, 17)) * TILE, GROUND_Y - 64.0, TILE, 64.0)
+		if _safe(fallback, occupied, holes, 42.0):
+			occupied.append(fallback)
+			root.pipes.append(fallback)
+			_add_solid(root, fallback)
+			_add_hazard(root, fallback)
 
-	for i in range(9):
-		var coin_pos := Vector2(start_x + float(2 + i * 3) * TILE, GROUND_Y - float(rng.randi_range(90, 210)))
-		var coin_rect := Rect2(coin_pos - Vector2(15, 15), Vector2(30, 30))
-		if _safe(coin_rect, occupied, holes, 10.0):
+	# Sparse collectibles: only a few coins per chunk, placed intentionally.
+	var coin_count := rng.randi_range(2, 4)
+	for i in range(coin_count):
+		var coin_pos := Vector2(start_x + float(rng.randi_range(7, 18)) * TILE, GROUND_Y - float(rng.randi_range(92, 190)))
+		if _safe(Rect2(coin_pos - Vector2(15, 15), Vector2(30, 30)), occupied, holes, 10.0):
 			_add_collectible(root, coin_pos, "coin")
 
 	if distance_steps >= 650 and rng.randf() < 0.22:
@@ -90,13 +94,9 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 		if _safe(Rect2(power_pos - Vector2(15, 15), Vector2(30, 30)), occupied, holes, 10.0):
 			_add_collectible(root, power_pos, "shield")
 
-	# Enemies are kept off holes/pipes and away from the start of a chunk.
-	# This prevents unfair deaths where a new enemy appears directly in the player's path.
 	var count := MaryouDifficultyCurve.enemy_count(distance_steps)
-	if chunk_index == 0:
-		count = 0
+	if chunk_index == 0: count = 0
 	for i in range(count):
-		var placed := false
 		for attempt in range(8):
 			var enemy_x := start_x + float(rng.randi_range(11, 18)) * TILE
 			var enemy_rect := Rect2(enemy_x - 18.0, GROUND_Y - 58.0, 36.0, 58.0)
@@ -106,10 +106,7 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 				enemy.setup(MaryouDifficultyCurve.enemy_kind(distance_steps, i))
 				enemy_root.add_child(enemy)
 				occupied.append(enemy_rect)
-				placed = true
 				break
-		if not placed:
-			continue
 
 func _add_solid(parent: Node2D, rect: Rect2) -> void:
 	var body := StaticBody2D.new()
@@ -139,19 +136,15 @@ func _add_collectible(parent: Node2D, position: Vector2, kind: String) -> void:
 	parent.add_child(item)
 
 func _on_collectible(kind: String) -> void:
-	if kind == "shield":
-		shield_collected.emit()
-	else:
-		coin_collected.emit()
+	if kind == "shield": shield_collected.emit()
+	else: coin_collected.emit()
 
 func _safe(rect: Rect2, occupied: Array[Rect2], holes: Array[Rect2], padding: float) -> bool:
 	var expanded := rect.grow(padding)
 	for hole in holes:
-		if expanded.intersects(hole):
-			return false
+		if expanded.intersects(hole): return false
 	for other in occupied:
-		if expanded.intersects(other):
-			return false
+		if expanded.intersects(other): return false
 	return true
 
 func _prune(player_x: float) -> void:
@@ -162,5 +155,4 @@ func _prune(player_x: float) -> void:
 			root.queue_free()
 			active_chunks.erase(key)
 	for child in enemy_root.get_children():
-		if is_instance_valid(child) and child.position.x < prune_before:
-			child.queue_free()
+		if is_instance_valid(child) and child.position.x < prune_before: child.queue_free()
