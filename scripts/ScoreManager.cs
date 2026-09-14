@@ -1,6 +1,5 @@
 using Godot;
 
-[GlobalClass]
 public partial class ScoreManager : Node
 {
     private const string RecordsPath = "user://records.cfg";
@@ -28,8 +27,7 @@ public partial class ScoreManager : Node
 
     public void UpdateSteps(int steps)
     {
-        if (steps > Steps)
-            Steps = steps;
+        Steps = Mathf.Max(Steps, steps);
     }
 
     public void AddCoin()
@@ -53,7 +51,7 @@ public partial class ScoreManager : Node
         Lives--;
         Combo = 0;
         PlaySound("hit");
-        return Lives <= 0;
+        return Lives == 0;
     }
 
     public int Multiplier()
@@ -82,8 +80,9 @@ public partial class ScoreManager : Node
 
     private void PlaySound(string type)
     {
-        AudioManager? audio = GetNodeOrNull<AudioManager>("/root/AudioManager");
-        audio?.PlaySfx(type);
+        Node node = GetNodeOrNull("/root/AudioManager");
+        if (node is AudioManager audio)
+            audio.PlaySfx(type);
     }
 
     private void LoadBest()
@@ -95,15 +94,13 @@ public partial class ScoreManager : Node
             return;
         }
 
-        Variant value = config.GetValue("records", "best_score", 0);
-        BestScore = Mathf.Max(0, value.AsInt32());
+        BestScore = Mathf.Max(0, config.GetValue("records", "best_score", 0).AsInt32());
     }
 
     private void SaveBest()
     {
         ConfigFile config = new ConfigFile();
         config.SetValue("records", "best_score", BestScore);
-
         Error error = config.Save(RecordsPath);
         if (error != Error.Ok)
             GD.PushWarning("Could not save records.cfg: " + error);
