@@ -17,14 +17,16 @@ var enemies: Node2D
 var hud: MaryouHUD
 var steps: int = 0
 var hit_lock: bool = false
-var touch_points: Dictionary = {}
-var touch_jump_pressed: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	if OS.has_feature("android"):
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
+
+	var checkpoint_spawn := GameState.consume_checkpoint_respawn()
+	var spawning_at_checkpoint := checkpoint_spawn != Vector2.INF
 	ScoreManager.reset_run()
+
 	enemies = Node2D.new()
 	enemies.name = "Enemies"
 	add_child(enemies)
@@ -34,18 +36,27 @@ func _ready() -> void:
 	world.setup(enemies)
 	world.coin_collected.connect(_on_coin)
 	world.hazard_hit.connect(_on_hazard)
+	world.checkpoint_reached.connect(_on_checkpoint_reached)
+
 	player = PlayerScene.new()
 	player.name = "Player"
 	player.position = Vector2(180, GROUND_Y - 30.0)
+	if spawning_at_checkpoint:
+		player.position = checkpoint_spawn + Vector2(-12.0, -38.0)
+		steps = maxi(0, int(player.position.x / GROUND_TILE_SIZE))
+		ScoreManager.steps = steps
 	add_child(player)
+
 	hud = HUDScene.new()
 	hud.name = "HUD"
 	hud.pause_pressed.connect(_toggle_pause)
 	hud.restart_pressed.connect(_restart)
 	hud.back_pressed.connect(_back_from_overlay)
 	add_child(hud)
-	world.generate_until(player.position.x, 0)
+
+	world.generate_until(player.position.x, steps)
 	_wire_enemies()
+	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps), player.shielded)
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
@@ -55,18 +66,17 @@ func _physics_process(delta: float) -> void:
 		_toggle_pause()
 		return
 
-	var distance: int = maxi(0, int(player.position.x / 32.0))
+	var distance: int = maxi(0, int(player.position.x / GROUND_TILE_SIZE))
 	steps = maxi(steps, distance)
 	ScoreManager.steps = steps
 	var speed: float = MaryouDifficultyCurve.speed_for_steps(steps)
-	var left: bool = Input.is_action_pressed("move_left") or _touch_held(0)
-	var right: bool = Input.is_action_pressed("move_right") or _touch_held(1)
-	var jump_held: bool = Input.is_action_pressed("jump") or _touch_held(2)
-	var jump_pressed: bool = Input.is_action_just_pressed("jump") or touch_jump_pressed
-	if jump_pressed and has_node("/root/AudioManager"):
+	var left: bool = Input.is_action_pressed("move_left")
+	var right: bool = Input.is_action_pressed("move_right")
+	var jump_held: bool = Input.is_action_pressed("jump")
+	var jump_pressed: bool = Input.is_action_just_pressed("jump")
+	if jump_pressed:
 		AudioManager.play_sfx("jump")
 	player.tick(delta, speed, left, right, jump_pressed, jump_held)
-	touch_jump_pressed = false
 
 	world.generate_until(player.position.x, steps)
 	_wire_enemies()
@@ -77,7 +87,7 @@ func _physics_process(delta: float) -> void:
 
 	if player.position.y > WORLD_HEIGHT + 80.0:
 		_finish_run()
-	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps))
+	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps), player.shielded)
 	queue_redraw()
 
 func _wire_enemies() -> void:
@@ -97,6 +107,10 @@ func _on_coin() -> void:
 func _on_hazard(_player: MaryouPlayer) -> void:
 	_juice(0.04, 0.94)
 
+func _on_checkpoint_reached(_position: Vector2) -> void:
+	if is_instance_valid(hud):
+		hud.show_checkpoint_notice()
+
 func _on_enemy_contact(_enemy: MaryouEnemy) -> void:
 	_take_damage()
 
@@ -110,6 +124,7 @@ func _take_damage() -> void:
 	if hit_lock or not ScoreManager.run_active or not is_instance_valid(player) or player.dead:
 		return
 	hit_lock = true
+	AudioManager.play_sfx("hit")
 	if player.take_damage(1):
 		_finish_run()
 	else:
@@ -123,6 +138,10 @@ func _finish_run() -> void:
 	ScoreManager.finish_run()
 	player.kill()
 	get_tree().paused = false
+	if is_instance_valid(player.camera):
+		var tween := create_tween().set_parallel(true)
+		tween.tween_property(player.camera, "zoom", Vector2(0.98, 0.98), 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	await get_tree().create_timer(0.14, true, false, true).timeout
 	if is_instance_valid(hud):
 		hud.show_game_over(ScoreManager.steps, ScoreManager.best_steps)
 
@@ -134,44 +153,14 @@ func _toggle_pause() -> void:
 	if is_instance_valid(hud): hud.show_pause(value, ScoreManager.steps, ScoreManager.best_steps)
 
 func _restart() -> void:
+	GameState.request_checkpoint_respawn()
 	get_tree().paused = false
 	get_tree().reload_current_scene()
 
 func _back_from_overlay() -> void:
+	GameState.clear_checkpoint()
 	get_tree().paused = false
 	get_tree().quit()
-
-func _touch_held(zone: int) -> bool:
-	for value in touch_points.values():
-		if int(value) == zone:
-			return true
-	return false
-
-func _input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		var size: Vector2 = get_viewport_rect().size
-		var p: Vector2 = event.position
-		if event.pressed:
-			var zone: int = 2
-			if p.y >= size.y * 0.78:
-				if p.x < size.x * 0.22:
-					zone = 0
-				elif p.x < size.x * 0.46:
-					zone = 1
-				touch_points[event.index] = zone
-				if zone == 2:
-					touch_jump_pressed = true
-		else:
-			touch_points.erase(event.index)
-	elif event is InputEventScreenDrag and touch_points.has(event.index):
-		var size: Vector2 = get_viewport_rect().size
-		if event.position.y >= size.y * 0.78:
-			if event.position.x < size.x * 0.22:
-				touch_points[event.index] = 0
-			elif event.position.x < size.x * 0.46:
-				touch_points[event.index] = 1
-			else:
-				touch_points[event.index] = 2
 
 func _juice(duration: float, time_scale: float) -> void:
 	Engine.time_scale = time_scale
@@ -192,8 +181,6 @@ func _draw() -> void:
 		draw_texture_rect_region(Rect2(0.0, 0.0, BACKDROP_WIDTH, 720.0), BACKGROUNDS, Rect2(source_x, 0.0, BACKGROUND_TILE_SIZE, BACKGROUND_TILE_SIZE))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-	# Draw only the ground rectangles that the world generator actually made.
-	# Holes therefore remain visually open and always match their collision.
 	var first_visible_x: float = cam_x - 1700.0
 	var last_visible_x: float = cam_x + 1900.0
 	for chunk_value in world.active_chunks.values():
