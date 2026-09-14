@@ -21,10 +21,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -38,6 +38,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platform-tools" "platforms;android-${ANDROID_API}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${ANDROID_NDK}"
 
       - name: Create CI debug keystore
@@ -74,32 +75,26 @@ jobs:
           unzip -q /tmp/templates.tpz -d /tmp/godot-templates
           cp -R /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
 
-      - name: Validate every GDScript script
+      - name: Validate Godot project and all GDScript
         shell: bash
         run: |
-          set -euo pipefail
-          failed=0
-          while IFS= read -r -d '' script; do
-            echo "[GDScript check] $script"
-            if ! godot --headless --path . --check-only --script "$script"; then
-              failed=1
-            fi
-          done < <(find . -type f -name '*.gd' -not -path './.git/*' -print0)
-          if [ "$failed" -ne 0 ]; then
-            echo "GDScript validation failed: one or more scripts have parse/type errors."
+          set -uo pipefail
+          log_file="$RUNNER_TEMP/godot-validation.log"
+          godot --headless --path . --editor --import --quit 2>&1 | tee "$log_file"
+          godot_status=${PIPESTATUS[0]}
+          if [ "$godot_status" -ne 0 ]; then
+            echo "Godot project validation failed with exit code $godot_status."
+            exit "$godot_status"
+          fi
+          if grep -Eq 'SCRIPT ERROR:|Parse Error:|Compile Error:|Failed to load script|Could not find type|Identifier .* not declared|No loader found for resource|referenced non-existent resource' "$log_file"; then
+            echo "Godot project validation found script/resource errors."
             exit 1
           fi
-
-      - name: Validate Godot project
-        shell: bash
-        run: |
-          set -euxo pipefail
-          godot --headless --path . --editor --quit
 
       - name: Run gameplay smoke test
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           godot --headless --path . --script tests/smoke_test.gd
 
       - name: Export signed Android debug APK
@@ -109,18 +104,16 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
-          set -euo pipefail
-          # Keep a hard GDScript validation immediately before export so this
-          # stage cannot produce an APK when any GDScript script fails to parse.
-          failed=0
-          while IFS= read -r -d '' script; do
-            echo "[Pre-export GDScript check] $script"
-            if ! godot --headless --path . --check-only --script "$script"; then
-              failed=1
-            fi
-          done < <(find . -type f -name '*.gd' -not -path './.git/*' -print0)
-          if [ "$failed" -ne 0 ]; then
-            echo "Refusing Android export because GDScript validation failed."
+          set -uo pipefail
+          log_file="$RUNNER_TEMP/godot-pre-export-validation.log"
+          godot --headless --path . --editor --quit 2>&1 | tee "$log_file"
+          godot_status=${PIPESTATUS[0]}
+          if [ "$godot_status" -ne 0 ]; then
+            echo "Refusing Android export because Godot project validation failed."
+            exit "$godot_status"
+          fi
+          if grep -Eq 'SCRIPT ERROR:|Parse Error:|Compile Error:|Failed to load script|Could not find type|Identifier .* not declared|No loader found for resource|referenced non-existent resource' "$log_file"; then
+            echo "Refusing Android export because GDScript/resource validation failed."
             exit 1
           fi
 
