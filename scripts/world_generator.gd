@@ -14,7 +14,6 @@ const CollectibleScript := preload("res://scripts/collectible.gd")
 const HazardScript := preload("res://scripts/hazard.gd")
 const EnemyScript := preload("res://scripts/enemy.gd")
 const PipeTexture := preload("res://assets/sprites/pipe.svg")
-const ENVIRONMENT := preload("res://assets/world/environment.svg")
 
 # Reusable obstacle scenes. The generator places the real interactive scenes,
 # rather than drawing decorative atlas regions, so collision and behavior stay
@@ -82,15 +81,6 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 	root.holes = holes
 	for hole in holes:
 		_add_hole_warning(root, hole)
-
-	if chunk_index > 0:
-		var decor_count := rng.randi_range(2, 4)
-		for i in range(decor_count):
-			var decor_x := start_x + float(rng.randi_range(2, 19)) * TILE
-			if rng.randf() < 0.58:
-				_add_environment(root, decor_x, 0)
-			else:
-				_add_environment(root, decor_x, 160)
 
 	# Spawn the actual obstacle scenes into the generated level. Each chunk gets
 	# at least one scene from the full 14-type rotation, with extra hazards as
@@ -163,9 +153,6 @@ func _add_obstacle(parent: Node2D, scene: PackedScene, position: Vector2, index:
 	obstacle.name = "Obstacle_%02d_%s" % [index, scene.resource_path.get_file().get_basename()]
 	obstacle.position = position
 	parent.add_child(obstacle)
-	# Checkpoints are progression markers rather than damage hazards. They still
-	# live in the hazards group for centralized reset/query behavior, but their
-	# own scene script handles the checkpoint signal.
 	if index == 13 and obstacle.has_method("set_checkpoint_position"):
 		obstacle.set_checkpoint_position(position)
 
@@ -195,24 +182,6 @@ func _add_hole_warning(parent: Node2D, hole: Rect2) -> void:
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.position = Vector2(hole.position.x + hole.size.x * 0.5, GROUND_Y - 18.0)
 	sprite.scale = Vector2(hole.size.x / 64.0, 0.72)
-	parent.add_child(sprite)
-
-func _add_environment(parent: Node2D, x: float, source_y: float) -> void:
-	var sprite := Sprite2D.new()
-	sprite.texture = ENVIRONMENT
-	sprite.region_enabled = true
-	if source_y == 0.0:
-		if int(x / TILE) % 3 == 0:
-			sprite.region_rect = Rect2(0.0, 0.0, 88.0, 142.0)
-		else:
-			sprite.region_rect = Rect2(160.0, 0.0, 96.0, 126.0)
-		sprite.position = Vector2(x, GROUND_Y - 63.0)
-	else:
-		sprite.region_rect = Rect2(256.0, 0.0, 104.0, 126.0)
-		sprite.position = Vector2(x, GROUND_Y - 63.0)
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	sprite.scale = Vector2(0.78, 0.78)
-	sprite.z_index = 1
 	parent.add_child(sprite)
 
 func _add_hazard(parent: Node2D, pipe: Rect2) -> void:
