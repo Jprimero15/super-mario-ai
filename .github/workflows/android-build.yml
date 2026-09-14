@@ -78,6 +78,12 @@ jobs:
           set -euxo pipefail
           godot --headless --path . --editor --quit
 
+      - name: Run gameplay smoke test
+        shell: bash
+        run: |
+          set -euxo pipefail
+          godot --headless --path . --script tests/smoke_test_v2.gd
+
       - name: Export signed Android debug APK
         shell: bash
         env:
@@ -87,7 +93,7 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p build/android
-          godot --headless --path . --export-debug "Android" build/android/maryou-ai-debug.apk
+          godot --headless --path . --export-debug "Android Debug" build/android/maryou-ai-debug.apk
           test -s build/android/maryou-ai-debug.apk
 
       - name: Verify APK signature
