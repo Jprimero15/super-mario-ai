@@ -12,6 +12,7 @@ class_name MaryouPlayer
 const WIDTH := 38.0
 const HEIGHT := 54.0
 const HIT_INVULNERABILITY := 1.15
+const SPRITE_FRAMES := preload("res://assets/sprites/maryou_frames.tres")
 
 var dead := false
 var shielded := false
@@ -22,8 +23,10 @@ var jump_buffer_timer := 0.0
 var squash := 1.0
 var stretch := 1.0
 var camera: Camera2D
+var animated_sprite: AnimatedSprite2D
 var shake_time := 0.0
 var shake_strength := 0.0
+var last_animation := ""
 
 func _ready() -> void:
 	z_index = 10
@@ -34,6 +37,12 @@ func _ready() -> void:
 	var collider := CollisionShape2D.new()
 	collider.shape = shape
 	add_child(collider)
+	animated_sprite = AnimatedSprite2D.new()
+	animated_sprite.sprite_frames = SPRITE_FRAMES
+	animated_sprite.animation = &"idle"
+	animated_sprite.position = Vector2(0, -2)
+	animated_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	add_child(animated_sprite)
 	camera = Camera2D.new()
 	camera.position = Vector2(250, -30)
 	camera.enabled = true
@@ -45,50 +54,49 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump_press
 	hit_invulnerability = maxf(0.0, hit_invulnerability - delta)
 	if shield_time > 0.0:
 		shield_time = maxf(0.0, shield_time - delta)
-		if shield_time == 0.0:
-			shielded = false
+		if shield_time == 0.0: shielded = false
 	if shake_time > 0.0:
 		shake_time = maxf(0.0, shake_time - delta)
-		if is_instance_valid(camera):
-			camera.offset = Vector2(randf_range(-shake_strength, shake_strength), randf_range(-shake_strength, shake_strength))
-	elif is_instance_valid(camera):
-		camera.offset = camera.offset.lerp(Vector2.ZERO, minf(delta * 14.0, 1.0))
+		if is_instance_valid(camera): camera.offset = Vector2(randf_range(-shake_strength, shake_strength), randf_range(-shake_strength, shake_strength))
+	elif is_instance_valid(camera): camera.offset = camera.offset.lerp(Vector2.ZERO, minf(delta * 14.0, 1.0))
 	if dead:
 		velocity.y += gravity * delta
 		move_and_slide()
+		_set_animation("dead")
 		queue_redraw()
 		return
-
-	if jump_pressed:
-		jump_buffer_timer = jump_buffer_time
-	else:
-		jump_buffer_timer = maxf(0.0, jump_buffer_timer - delta)
-	if is_on_floor():
-		coyote_timer = coyote_time
-	else:
-		coyote_timer = maxf(0.0, coyote_timer - delta)
-
+	if jump_pressed: jump_buffer_timer = jump_buffer_time
+	else: jump_buffer_timer = maxf(0.0, jump_buffer_timer - delta)
+	if is_on_floor(): coyote_timer = coyote_time
+	else: coyote_timer = maxf(0.0, coyote_timer - delta)
 	velocity.x = target_speed
 	var direction := Input.get_axis("move_left", "move_right")
 	if left: direction -= 1.0
 	if right: direction += 1.0
 	if direction != 0.0:
 		velocity.x = clampf(velocity.x + direction * side_accel * delta, target_speed - max_side_speed, target_speed + max_side_speed)
-	else:
-		velocity.x = move_toward(velocity.x, target_speed, side_accel * delta)
-
+	else: velocity.x = move_toward(velocity.x, target_speed, side_accel * delta)
 	if jump_buffer_timer > 0.0 and coyote_timer > 0.0:
 		velocity.y = jump_velocity
 		jump_buffer_timer = 0.0
 		coyote_timer = 0.0
 		stretch = 1.18
-	if not jump_held and velocity.y < -260.0:
-		velocity.y = -260.0
+	if not jump_held and velocity.y < -260.0: velocity.y = -260.0
 	velocity.y += gravity * delta
 	move_and_slide()
 	if is_on_floor(): squash = move_toward(squash, 1.0, delta * 8.0)
 	stretch = move_toward(stretch, 1.0, delta * 6.0)
+	if hit_invulnerability > 0.0: _set_animation("hurt")
+	elif not is_on_floor(): _set_animation("jump" if velocity.y < 0.0 else "fall")
+	elif absf(velocity.x) > target_speed + 25.0: _set_animation("run")
+	else: _set_animation("idle")
+	if is_instance_valid(animated_sprite) and absf(direction) > 0.01: animated_sprite.flip_h = direction < 0.0
 	queue_redraw()
+
+func _set_animation(name: String) -> void:
+	if not is_instance_valid(animated_sprite) or last_animation == name: return
+	last_animation = name
+	animated_sprite.play(name)
 
 func take_hit() -> bool:
 	if dead or hit_invulnerability > 0.0: return false
@@ -99,12 +107,14 @@ func take_hit() -> bool:
 		velocity.y = -300.0
 		squash = 0.82
 		shake(4.0, 0.12)
+		_set_animation("hurt")
 		queue_redraw()
 		return false
 	hit_invulnerability = HIT_INVULNERABILITY
 	squash = 0.82
 	velocity.y = minf(velocity.y, -240.0)
 	shake(8.0, 0.16)
+	_set_animation("hurt")
 	queue_redraw()
 	return true
 
@@ -123,27 +133,8 @@ func kill() -> void:
 	velocity = Vector2(velocity.x * 0.35, -420.0)
 	squash = 0.72
 	shake(10.0, 0.2)
+	_set_animation("dead")
 	queue_redraw()
 
 func _draw() -> void:
-	var body := Rect2(-WIDTH * 0.5, -HEIGHT * 0.5, WIDTH, HEIGHT)
-	var scaled := Rect2(body.position.x, body.position.y + HEIGHT * (1.0 - stretch) * 0.25, body.size.x * squash, body.size.y * stretch)
-	var body_color := Color("#2d6cdf")
-	if hit_invulnerability > 0.0 and not dead and int(hit_invulnerability * 12.0) % 2 == 0: body_color = Color("#6f9cf4")
-	draw_style_box(_box(body_color, 12), scaled)
-	draw_circle(Vector2(-8, -18), 10, Color("#f4c7a1"))
-	draw_circle(Vector2(8, -18), 10, Color("#f4c7a1"))
-	draw_circle(Vector2(-5, -20), 2.5, Color("#1f2530"))
-	draw_circle(Vector2(5, -20), 2.5, Color("#1f2530"))
-	draw_rect(Rect2(-14, 18, 10, 7), Color("#202938"))
-	draw_rect(Rect2(4, 18, 10, 7), Color("#202938"))
 	if shielded: draw_arc(Vector2.ZERO, 34.0, 0.0, TAU, 32, Color(0.35, 0.9, 0.85, 0.75), 3.0)
-
-func _box(color: Color, radius: int) -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.bg_color = color
-	box.corner_radius_top_left = radius
-	box.corner_radius_top_right = radius
-	box.corner_radius_bottom_left = radius
-	box.corner_radius_bottom_right = radius
-	return box
