@@ -171,7 +171,7 @@ func update_enemies(delta: float) -> void:
 			continue
 		if enemy.defeated:
 			continue
-		var half := enemy.size * 0.5
+		var half: float = enemy.size * 0.5
 		var hitbox := Rect2(enemy.position - Vector2(half, half), Vector2(enemy.size, enemy.size))
 		if player.get_rect().intersects(hitbox):
 			if player.velocity.y > 50.0 and player.position.y < enemy.position.y - 8.0:
@@ -331,7 +331,7 @@ func update_ui() -> void:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
-		var p := event.position
+		var p: Vector2 = event.position
 		if event.pressed:
 			if p.y > 590.0 and p.x < 220.0: touch_left = true
 			elif p.y > 590.0 and p.x < 470.0: touch_right = true
@@ -341,7 +341,7 @@ func _input(event: InputEvent) -> void:
 			touch_right = false
 			touch_jump = false
 	elif event is InputEventScreenDrag:
-		var p := event.position
+		var p: Vector2 = event.position
 		touch_left = p.y > 590.0 and p.x < 220.0
 		touch_right = p.y > 590.0 and p.x >= 220.0 and p.x < 470.0
 		touch_jump = p.y > 590.0 and p.x >= 470.0
