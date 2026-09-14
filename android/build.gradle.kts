@@ -41,26 +41,42 @@ val nativesArmeabiV7a by configurations.creating
 val nativesArm64V8a by configurations.creating
 val nativesX86 by configurations.creating
 val nativesX86_64 by configurations.creating
+val freetypeNativesArmeabiV7a by configurations.creating
+val freetypeNativesArm64V8a by configurations.creating
+val freetypeNativesX86 by configurations.creating
+val freetypeNativesX86_64 by configurations.creating
 
 dependencies {
     implementation(project(":core"))
     implementation("com.badlogicgames.gdx:gdx-backend-android:$gdxVersion")
+
     nativesArmeabiV7a("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a")
     nativesArm64V8a("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a")
     nativesX86("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86")
     nativesX86_64("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
+
+    freetypeNativesArmeabiV7a("com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-armeabi-v7a")
+    freetypeNativesArm64V8a("com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-arm64-v8a")
+    freetypeNativesX86("com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-x86")
+    freetypeNativesX86_64("com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-x86_64")
 }
 
-/** Extract LibGDX natives into the Android jniLibs ABI layout. */
+/** Extract LibGDX and FreeType natives into Android's ABI directory layout. */
 val copyLibGdxNatives by tasks.registering(Sync::class) {
     description = "Extract LibGDX natives into Android ABI directories."
     group = "build"
     into(nativeOutputDir)
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     from(nativesArmeabiV7a.files.map { zipTree(it) }) { include("**/libgdx.so"); eachFile { path = "armeabi-v7a/libgdx.so" }; includeEmptyDirs = false }
     from(nativesArm64V8a.files.map { zipTree(it) }) { include("**/libgdx.so"); eachFile { path = "arm64-v8a/libgdx.so" }; includeEmptyDirs = false }
     from(nativesX86.files.map { zipTree(it) }) { include("**/libgdx.so"); eachFile { path = "x86/libgdx.so" }; includeEmptyDirs = false }
     from(nativesX86_64.files.map { zipTree(it) }) { include("**/libgdx.so"); eachFile { path = "x86_64/libgdx.so" }; includeEmptyDirs = false }
+
+    from(freetypeNativesArmeabiV7a.files.map { zipTree(it) }) { include("**/libgdx-freetype.so"); eachFile { path = "armeabi-v7a/libgdx-freetype.so" }; includeEmptyDirs = false }
+    from(freetypeNativesArm64V8a.files.map { zipTree(it) }) { include("**/libgdx-freetype.so"); eachFile { path = "arm64-v8a/libgdx-freetype.so" }; includeEmptyDirs = false }
+    from(freetypeNativesX86.files.map { zipTree(it) }) { include("**/libgdx-freetype.so"); eachFile { path = "x86/libgdx-freetype.so" }; includeEmptyDirs = false }
+    from(freetypeNativesX86_64.files.map { zipTree(it) }) { include("**/libgdx-freetype.so"); eachFile { path = "x86_64/libgdx-freetype.so" }; includeEmptyDirs = false }
 }
 
 tasks.named("preBuild") { dependsOn(copyLibGdxNatives) }
