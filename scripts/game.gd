@@ -9,6 +9,7 @@ const WORLD_HEIGHT: float = 720.0
 const GROUND_Y: float = 560.0
 const VIEW_WIDTH: float = 1280.0
 const BACKDROP_WIDTH: float = 720.0
+const BACKGROUND_TILE_SIZE: float = 384.0
 
 var player: MaryouPlayer
 var world: MaryouWorldGenerator
@@ -182,15 +183,14 @@ func _juice(duration: float, time_scale: float) -> void:
 
 func _draw() -> void:
 	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
-	# One 1024x256 texture contains four 256x256 seasonal tiles.
-	# Rotate seasons every 500 distance steps so the endless runner cycles
-	# spring -> summer -> autumn -> winter and then repeats.
+	# The uploaded 1536x384 texture contains four 384x384 seasonal tiles.
+	# Rotate seasons every 500 distance steps: spring -> summer -> autumn -> winter.
 	var season: int = posmod(steps / 500, 4)
-	var source_x: float = float(season) * 256.0
+	var source_x: float = float(season) * BACKGROUND_TILE_SIZE
 	var first_x: float = floorf((cam_x - 1600.0) / BACKDROP_WIDTH) * BACKDROP_WIDTH
 	for i in range(6):
 		var x: float = first_x + float(i) * BACKDROP_WIDTH
-		draw_texture_rect_region(BACKGROUNDS, Rect2(x, -40.0, BACKDROP_WIDTH, 720.0), Rect2(source_x, 0.0, 256.0, 256.0))
+		draw_texture_rect_region(BACKGROUNDS, Rect2(x, -40.0, BACKDROP_WIDTH, 720.0), Rect2(source_x, 0.0, BACKGROUND_TILE_SIZE, BACKGROUND_TILE_SIZE))
 	var ground_start: float = floorf((cam_x - 1700.0) / 32.0) * 32.0
 	for i in range(108):
 		var x: float = ground_start + float(i) * 32.0
