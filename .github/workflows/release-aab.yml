@@ -1,0 +1,88 @@
+name: Android Release AAB
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: "4.7.2"
+  ANDROID_API: "35"
+  ANDROID_BUILD_TOOLS: "35.0.1"
+  ANDROID_NDK: "28.1.13356709"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        run: |
+          set -euxo pipefail
+          sdkmanager "platform-tools" "platforms;android-${ANDROID_API}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${ANDROID_NDK}"
+
+      - name: Restore release keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.MARYOU_RELEASE_KEYSTORE_B64 }}
+        run: |
+          set -euxo pipefail
+          test -n "$KEYSTORE_B64"
+          mkdir -p "$RUNNER_TEMP/maryou"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/maryou/release.keystore"
+          test -s "$RUNNER_TEMP/maryou/release.keystore"
+
+      - name: Download Godot 4.7.2
+        run: |
+          set -euxo pipefail
+          curl -fsSL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          sudo install -m 0755 "/tmp/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          godot --version
+
+      - name: Install export templates
+        run: |
+          set -euxo pipefail
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          curl -fsSL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o /tmp/templates.tpz
+          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
+          cp -R /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
+
+      - name: Install Godot Android Gradle template
+        run: |
+          set -euxo pipefail
+          godot --headless --path . --install-android-build-template --quit
+
+      - name: Validate project
+        run: godot --headless --path . --editor --quit
+
+      - name: Export signed AAB
+        env:
+          GODOT_ANDROID_KEYSTORE_RELEASE_PATH: ${{ runner.temp }}/maryou/release.keystore
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER: ${{ secrets.MARYOU_RELEASE_KEY_ALIAS }}
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.MARYOU_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euxo pipefail
+          test -n "$GODOT_ANDROID_KEYSTORE_RELEASE_USER"
+          test -n "$GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD"
+          mkdir -p build/android
+          godot --headless --path . --export-release "Android Release AAB" build/android/maryou-ai-release.aab
+          test -s build/android/maryou-ai-release.aab
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: maryou-ai-release-aab
+          path: build/android/maryou-ai-release.aab
+          if-no-files-found: error
