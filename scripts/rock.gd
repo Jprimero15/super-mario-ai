@@ -1,6 +1,8 @@
 extends Area2D
 class_name MaryouRock
 
+signal hit_player(player: MaryouPlayer)
+
 @export var roll_speed := 115.0
 @export var roll_range := 120.0
 
@@ -23,5 +25,8 @@ func _physics_process(delta: float) -> void:
 		direction = 1.0
 
 func _on_body_entered(body: Node2D) -> void:
-	if body is MaryouPlayer:
-		(body as MaryouPlayer).take_damage(1)
+	if not body is MaryouPlayer:
+		return
+	var player := body as MaryouPlayer
+	if player.take_damage(1):
+		hit_player.emit(player)
