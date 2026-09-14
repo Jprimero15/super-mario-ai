@@ -16,6 +16,7 @@ const WIDTH := 38.0
 const HEIGHT := 54.0
 const HIT_INVULNERABILITY := 1.15
 const SPRITE_FRAMES := preload("res://assets/sprites/maryou_frames.tres")
+const GAME_ZOOM := Vector2(1.20, 1.20)
 
 var dead := false
 var shielded := false
@@ -48,6 +49,7 @@ func _ready() -> void:
 	add_child(animated_sprite)
 	camera = Camera2D.new()
 	camera.position = Vector2(250, -30)
+	camera.zoom = GAME_ZOOM
 	camera.enabled = true
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 7.0
