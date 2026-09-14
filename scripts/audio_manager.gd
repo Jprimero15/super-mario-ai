@@ -3,7 +3,8 @@ extends Node
 const SETTINGS_PATH := "user://settings.cfg"
 const MUSIC_BUS := "Music"
 const SFX_BUS := "SFX"
-const MUSIC_RATE := 22050
+# Android devices are much more consistent with the native 44.1 kHz mix rate.
+const MUSIC_RATE := 44100
 var music_volume := 0.8
 var sfx_volume := 0.9
 var music_player: AudioStreamPlayer
@@ -15,6 +16,12 @@ func _ready() -> void:
 	_apply_music()
 	_apply_sfx()
 	_start_procedural_music()
+
+func _exit_tree() -> void:
+	# Stop playback before the autoload is torn down. This avoids leaving an
+	# AudioTrack callback active while Android is destroying the Godot runtime.
+	if is_instance_valid(music_player):
+		music_player.stop()
 
 func set_music_volume(value: float) -> void:
 	music_volume = clampf(value, 0.0, 1.0)
@@ -60,10 +67,20 @@ func _start_procedural_music() -> void:
 	music_player.bus = MUSIC_BUS
 	music_player.stream = _build_music_stream()
 	add_child(music_player)
+	# Do not use AudioStreamWAV.LOOP_FORWARD here. Godot's WAV loop boundary
+	# handling has had over-read issues, and this project targets Android 16.
+	# Restarting the finished stream on the main thread is safer.
+	music_player.finished.connect(_on_music_finished)
 	music_player.play()
+
+func _on_music_finished() -> void:
+	if is_instance_valid(music_player) and not music_player.is_playing():
+		music_player.play()
 
 func _build_music_stream() -> AudioStreamWAV:
 	# A light 8-second arcade loop: bass pulse, chord bed and a simple melody.
+	# The stream itself is intentionally non-looping; _on_music_finished()
+	# restarts it to avoid the native WAV loop-boundary path on Android.
 	const LENGTH := 8.0
 	const BEAT := 0.5
 	var samples := int(LENGTH * MUSIC_RATE)
@@ -92,9 +109,6 @@ func _build_music_stream() -> AudioStreamWAV:
 	wav.mix_rate = MUSIC_RATE
 	wav.stereo = false
 	wav.data = data
-	wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	wav.loop_begin = 0
-	wav.loop_end = samples
 	return wav
 
 func _apply_music() -> void: _set_bus_volume(MUSIC_BUS, music_volume)
