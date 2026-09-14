@@ -1,6 +1,6 @@
 using Godot;
 
-public partial class MaryouHazard : Area2D
+public partial class Hazard : Area2D
 {
     [Signal] public delegate void HitPlayerEventHandler();
 
@@ -13,6 +13,6 @@ public partial class MaryouHazard : Area2D
 
     private void OnBodyEntered(Node2D body)
     {
-        if (body is MaryouPlayer) EmitSignal(SignalName.HitPlayer);
+        if (body is Player) EmitSignal(SignalName.HitPlayer);
     }
 }

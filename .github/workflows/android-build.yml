@@ -23,10 +23,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8
+      - name: Setup .NET 9
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '9.0.x'
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -99,19 +99,38 @@ jobs:
           unzip -q /tmp/templates.tpz -d /tmp/godot-templates
           cp -R /tmp/godot-templates/templates/. "$TEMPLATE_DIR/"
           test -f "$TEMPLATE_DIR/android_source.zip"
-          echo "Installed Android template: $TEMPLATE_DIR/android_source.zip"
+
+      - name: Generate Godot C# solution
+        shell: bash
+        run: |
+          set -euxo pipefail
+          godot --headless --path . --editor --quit --build-solutions
+          test -f super-mario-ai.sln
 
       - name: Restore C# dependencies
-        run: dotnet restore super-mario-ai.csproj
+        run: dotnet restore super-mario-ai.sln
 
-      - name: Build C# project
-        run: dotnet build super-mario-ai.csproj --configuration Debug --no-restore
+      - name: Build C# solution
+        run: dotnet build super-mario-ai.sln --configuration Debug --no-restore
 
-      - name: Validate Godot project
+      - name: Verify C# assembly
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f .godot/mono/temp/bin/Debug/super-mario-ai.dll
+          dotnet --info
+
+      - name: Refresh Godot C# assembly metadata
         shell: bash
         run: |
           set -euxo pipefail
           godot --headless --path . --editor --quit
+
+      - name: Run Godot C# smoke test
+        shell: bash
+        run: |
+          set -euxo pipefail
+          godot --headless --path . --script tests/smoke_test_v2.gd
 
       - name: Export signed Android debug APK
         shell: bash

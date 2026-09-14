@@ -1,21 +1,31 @@
 using Godot;
 using System.Collections.Generic;
 
-public partial class MaryouWorldGenerator : Node2D
+public partial class WorldGenerator : Node2D
 {
     [Signal] public delegate void CoinCollectedEventHandler();
     [Signal] public delegate void ShieldCollectedEventHandler();
     [Signal] public delegate void HazardHitEventHandler();
+
     private const float ChunkWidth = 640, Tile = 32, GroundY = 560;
-    private const int Seed = 20260914;
     private readonly Texture2D _pipeTexture = GD.Load<Texture2D>("res://assets/sprites/pipe.svg");
     private readonly Texture2D _environment = GD.Load<Texture2D>("res://assets/world/environment.svg");
     private readonly Texture2D _obstacles = GD.Load<Texture2D>("res://assets/world/obstacles.svg");
     private int _generatedTo = -1;
-    private readonly Dictionary<int, MaryouChunk> _activeChunks = new();
+    private int _runSeed;
+    private readonly Dictionary<int, Chunk> _activeChunks = new();
+    private readonly List<Rect2> _previousBoundaryHazards = new();
     private Node2D? _enemyRoot;
 
-    public void Setup(Node2D enemies) => _enemyRoot = enemies;
+    public int RunSeed => _runSeed;
+
+    public void Setup(Node2D enemies)
+    {
+        _enemyRoot = enemies;
+        _runSeed = (int)(Time.GetUnixTimeFromSystem() % 2147483647.0);
+        if (_runSeed <= 0) _runSeed = 1;
+        _previousBoundaryHazards.Clear();
+    }
 
     public void GenerateUntil(float playerX, int distanceSteps)
     {
@@ -27,20 +37,27 @@ public partial class MaryouWorldGenerator : Node2D
     private void GenerateChunk(int chunkIndex, int distanceSteps)
     {
         if (_activeChunks.ContainsKey(chunkIndex)) return;
-        var root = new MaryouChunk { Name = $"Chunk_{chunkIndex}" }; AddChild(root); _activeChunks[chunkIndex] = root;
-        var rng = new RandomNumberGenerator { Seed = (ulong)(Seed + chunkIndex * 7919) };
+        var root = new Chunk { Name = $"Chunk_{chunkIndex}" };
+        AddChild(root); _activeChunks[chunkIndex] = root;
+        ulong seed = (ulong)(_runSeed + chunkIndex * 7919L);
+        var rng = new RandomNumberGenerator { Seed = seed };
         float startX = chunkIndex * ChunkWidth;
-        var occupied = new List<Rect2>(); var holes = new List<Rect2>();
-        float holeChance = MaryouDifficultyCurve.HoleChance(distanceSteps), safeGapUntil = startX + 300;
+        var occupied = new List<Rect2>(_previousBoundaryHazards);
+        var holes = new List<Rect2>();
+        float holeChance = DifficultyCurve.HoleChance(distanceSteps);
+        float safeGapUntil = startX + 300;
+
         for (int i = 0; i < 20; i++)
         {
             float x = startX + i * Tile;
             if (x < safeGapUntil) continue;
             if (i > 7 && i < 19 && rng.Randf() < holeChance)
             {
-                float width = rng.RandiRange(32, 64); var hole = new Rect2(x, GroundY, width, Tile); holes.Add(hole); safeGapUntil = hole.End.X + 96;
+                float width = rng.RandiRange(32, 64); var hole = new Rect2(x, GroundY, width, Tile);
+                if (Safe(hole, occupied, holes, 42)) { holes.Add(hole); safeGapUntil = hole.End.X + 96; }
             }
         }
+
         for (int i = 0; i < 20; i++)
         {
             var tile = new Rect2(startX + i * Tile, GroundY, Tile, Tile); bool blocked = false;
@@ -58,7 +75,7 @@ public partial class MaryouWorldGenerator : Node2D
         int pipeAttempts = 1 + distanceSteps / 500, pipesPlaced = 0;
         for (int i = 0; i < pipeAttempts; i++)
         {
-            if (rng.Randf() > MaryouDifficultyCurve.PipeChance(distanceSteps)) continue;
+            if (rng.Randf() > DifficultyCurve.PipeChance(distanceSteps)) continue;
             var pipe = new Rect2(startX + rng.RandiRange(9, 18) * Tile, GroundY - rng.RandiRange(2, 3) * Tile, Tile, rng.RandiRange(2, 3) * Tile);
             if (pipe.Position.X < safeGapUntil || !Safe(pipe, occupied, holes, 42)) continue;
             occupied.Add(pipe); root.Pipes.Add(pipe); AddSolid(root, pipe); AddHazard(root, pipe); pipesPlaced++;
@@ -81,14 +98,23 @@ public partial class MaryouWorldGenerator : Node2D
             if (Safe(new Rect2(pos - new Vector2(15, 15), new Vector2(30, 30)), occupied, holes, 10)) AddCollectible(root, pos, "shield");
         }
 
-        int count = MaryouDifficultyCurve.EnemyCount(distanceSteps); if (chunkIndex == 0) count = 0;
+        int count = DifficultyCurve.EnemyCount(distanceSteps); if (chunkIndex == 0) count = 0;
         for (int i = 0; i < count; i++)
+        {
             for (int attempt = 0; attempt < 8; attempt++)
             {
-                float enemyX = startX + rng.RandiRange(11, 18) * Tile; var enemyRect = new Rect2(enemyX - 18, GroundY - 58, 36, 58);
+                float enemyX = startX + rng.RandiRange(11, 18) * Tile;
+                var enemyRect = new Rect2(enemyX - 18, GroundY - 58, 36, 58);
                 if (!Safe(enemyRect, occupied, holes, 48)) continue;
-                var enemy = new MaryouEnemy { Position = new Vector2(enemyX, GroundY - 40) }; enemy.Setup(MaryouDifficultyCurve.EnemyKind(distanceSteps, i)); _enemyRoot!.AddChild(enemy); occupied.Add(enemyRect); break;
+                var enemy = new Enemy { Position = new Vector2(enemyX, GroundY - 40) };
+                enemy.Setup(DifficultyCurve.EnemyKind(distanceSteps, i)); _enemyRoot!.AddChild(enemy); occupied.Add(enemyRect); break;
             }
+        }
+
+        _previousBoundaryHazards.Clear();
+        foreach (var hole in holes) _previousBoundaryHazards.Add(hole);
+        foreach (var pipe in root.Pipes) _previousBoundaryHazards.Add(pipe);
+        for (int i = 0; i < occupied.Count; i++) { Rect2 item = occupied[i]; if (item.Position.X >= startX && item.Position.X < startX + ChunkWidth) _previousBoundaryHazards.Add(item); }
     }
 
     private void AddSolid(Node2D parent, Rect2 rect)
@@ -97,7 +123,8 @@ public partial class MaryouWorldGenerator : Node2D
         body.AddChild(new CollisionShape2D { Shape = new RectangleShape2D { Size = rect.Size } });
         if (rect.Position.Y < GroundY && rect.Size.Y > Tile)
         {
-            var sprite = new Sprite2D { Texture = _pipeTexture, TextureFilter = CanvasItem.TextureFilterEnum.Nearest, Scale = new Vector2(rect.Size.X / 32, rect.Size.Y / 96) }; body.AddChild(sprite);
+            var sprite = new Sprite2D { Texture = _pipeTexture, TextureFilter = CanvasItem.TextureFilterEnum.Nearest, Scale = new Vector2(rect.Size.X / 32, rect.Size.Y / 96) };
+            body.AddChild(sprite);
         }
         parent.AddChild(body);
     }
@@ -118,26 +145,35 @@ public partial class MaryouWorldGenerator : Node2D
 
     private void AddHazard(Node2D parent, Rect2 pipe)
     {
-        var area = new MaryouHazard(); float height = Mathf.Max(10, pipe.Size.Y - 20); area.Position = pipe.Position + new Vector2(pipe.Size.X * .5f, pipe.Size.Y * .5f + 10);
-        area.Setup(new Vector2(pipe.Size.X + 8, height)); area.HitPlayer += () => EmitSignal(SignalName.HazardHit); parent.AddChild(area);
+        var area = new Hazard(); float height = Mathf.Max(10, pipe.Size.Y - 20);
+        area.Position = pipe.Position + new Vector2(pipe.Size.X * .5f, pipe.Size.Y * .5f + 10); area.Setup(new Vector2(pipe.Size.X + 8, height)); area.HitPlayer += () => EmitSignal(SignalName.HazardHit); parent.AddChild(area);
     }
 
     private void AddCollectible(Node2D parent, Vector2 position, string kind)
     {
-        var item = new MaryouCollectible { Position = position }; item.Setup(kind); item.Collected += OnCollectible; parent.AddChild(item);
+        var item = new Collectible { Position = position }; item.Setup(kind); item.Collected += OnCollectible; parent.AddChild(item);
     }
 
-    private void OnCollectible(string kind) { if (kind == "shield") EmitSignal(SignalName.ShieldCollected); else EmitSignal(SignalName.CoinCollected); }
+    private void OnCollectible(string kind)
+    {
+        if (kind == "shield") EmitSignal(SignalName.ShieldCollected); else EmitSignal(SignalName.CoinCollected);
+    }
 
     private static bool Safe(Rect2 rect, List<Rect2> occupied, List<Rect2> holes, float padding)
     {
-        var expanded = rect.Grow(padding); foreach (var hole in holes) if (expanded.Intersects(hole)) return false; foreach (var other in occupied) if (expanded.Intersects(other)) return false; return true;
+        var expanded = rect.Grow(padding);
+        foreach (var hole in holes) if (expanded.Intersects(hole)) return false;
+        foreach (var other in occupied) if (expanded.Intersects(other)) return false;
+        return true;
     }
 
     private void Prune(float playerX)
     {
         float pruneBefore = playerX - ChunkWidth * 5;
-        foreach (int key in new List<int>(_activeChunks.Keys)) if (IsInstanceValid(_activeChunks[key]) && key * ChunkWidth + ChunkWidth < pruneBefore) { _activeChunks[key].QueueFree(); _activeChunks.Remove(key); }
+        foreach (int key in new List<int>(_activeChunks.Keys))
+        {
+            if (IsInstanceValid(_activeChunks[key]) && key * ChunkWidth + ChunkWidth < pruneBefore) { _activeChunks[key].QueueFree(); _activeChunks.Remove(key); }
+        }
         if (_enemyRoot == null) return;
         foreach (Node child in _enemyRoot.GetChildren()) if (IsInstanceValid(child) && child is Node2D node && node.Position.X < pruneBefore) node.QueueFree();
     }

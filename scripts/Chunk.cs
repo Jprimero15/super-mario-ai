@@ -1,7 +1,7 @@
 using Godot;
 using System.Collections.Generic;
 
-public partial class MaryouChunk : Node2D
+public partial class Chunk : Node2D
 {
     public readonly List<Rect2> Solids = new();
     public readonly List<Rect2> Holes = new();
