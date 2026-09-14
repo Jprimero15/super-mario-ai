@@ -117,10 +117,16 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          test -f .godot/mono/temp/bin/Debug/super-mario-ai.dll
+          test -s .godot/mono/temp/bin/Debug/super-mario-ai.dll
           dotnet --info
 
-      - name: Refresh Godot C# assembly metadata
+      - name: Register rebuilt C# assembly with Godot
+        shell: bash
+        run: |
+          set -euxo pipefail
+          godot --headless --path . --editor --quit --build-solutions
+
+      - name: Verify C# script registration
         shell: bash
         run: |
           set -euxo pipefail
