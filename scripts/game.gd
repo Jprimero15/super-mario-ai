@@ -2,7 +2,6 @@ extends Node2D
 
 const PlayerScene := preload("res://scripts/player.gd")
 const WorldScene := preload("res://scripts/world_generator.gd")
-const EnemyScript := preload("res://scripts/enemy.gd")
 const HUDScene := preload("res://scripts/hud.gd")
 const WORLD_HEIGHT := 720.0
 const GROUND_Y := 560.0
@@ -15,7 +14,6 @@ var steps := 0
 var hit_lock := false
 var touch_points: Dictionary = {}
 var touch_jump_pressed := false
-var camera: Camera2D
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -26,16 +24,15 @@ func _ready() -> void:
 	world = WorldScene.new()
 	world.name = "WorldGenerator"
 	world.setup(enemies)
-	add_child(world)
 	world.coin_collected.connect(_on_coin)
 	world.shield_collected.connect(_on_shield)
 	world.hazard_hit.connect(_on_hazard)
+	add_child(world)
 
 	player = PlayerScene.new()
 	player.name = "Player"
 	player.position = Vector2(180, GROUND_Y - 35)
 	add_child(player)
-	camera = player.get_node_or_null("Camera2D") as Camera2D
 
 	hud = HUDScene.new()
 	hud.name = "HUD"
@@ -44,13 +41,13 @@ func _ready() -> void:
 	hud.back_pressed.connect(_back_from_overlay)
 	add_child(hud)
 	world.generate_until(player.position.x, 0)
+	_wire_enemies()
 	queue_redraw()
 
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("pause"):
 		_toggle_pause()
 		return
-
 	var distance := maxi(0, int(player.position.x / 32.0))
 	steps = maxi(steps, distance)
 	ScoreManager.steps = steps
@@ -61,18 +58,22 @@ func _process(delta: float) -> void:
 	player.tick(delta, speed, left, right, touch_jump_pressed, jump_held)
 	touch_jump_pressed = false
 	world.generate_until(player.position.x, steps)
-
-	for enemy in enemies.get_children():
-		if is_instance_valid(enemy) and enemy is MaryouEnemy:
-			enemy.tick(delta, player.position.x)
-			if enemy.position.y > WORLD_HEIGHT + 220.0:
-				enemy.queue_free()
-
+	_wire_enemies()
 	if player.position.y > WORLD_HEIGHT + 80.0:
 		_finish_run()
-
 	hud.update_stats(ScoreManager.score(), ScoreManager.lives, ScoreManager.coins, ScoreManager.combo, MaryouDifficultyCurve.tier_for_steps(steps), int(player.position.x / 32.0))
 	queue_redraw()
+
+func _wire_enemies() -> void:
+	for child in enemies.get_children():
+		if not is_instance_valid(child) or not child is MaryouEnemy:
+			continue
+		var enemy := child as MaryouEnemy
+		if enemy.has_meta("maryou_wired"):
+			continue
+		enemy.player_contact.connect(_on_enemy_contact)
+		enemy.stomped.connect(_on_enemy_stomp)
+		enemy.set_meta("maryou_wired", true)
 
 func _on_coin() -> void:
 	ScoreManager.add_coin()
@@ -83,10 +84,10 @@ func _on_shield() -> void:
 func _on_hazard() -> void:
 	_take_damage()
 
-func _on_enemy_contact(enemy: MaryouEnemy) -> void:
+func _on_enemy_contact(_enemy: MaryouEnemy) -> void:
 	_take_damage()
 
-func _on_enemy_stomp(enemy: MaryouEnemy) -> void:
+func _on_enemy_stomp(_enemy: MaryouEnemy) -> void:
 	ScoreManager.add_stomp()
 	_juice(0.06, 0.88)
 
@@ -138,15 +139,14 @@ func _touch_held(zone: int) -> bool:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
-		var viewport_size := get_viewport_rect().size
+		var size := get_viewport_rect().size
 		var p := event.position
-		var y_threshold := viewport_size.y * 0.78
 		if event.pressed:
 			var zone := 2
-			if p.y >= y_threshold:
-				if p.x < viewport_size.x * 0.22:
+			if p.y >= size.y * 0.78:
+				if p.x < size.x * 0.22:
 					zone = 0
-				elif p.x < viewport_size.x * 0.46:
+				elif p.x < size.x * 0.46:
 					zone = 1
 				touch_points[event.index] = zone
 				if zone == 2:
@@ -155,16 +155,15 @@ func _input(event: InputEvent) -> void:
 				touch_points[event.index] = -1
 		else:
 			touch_points.erase(event.index)
-	elif event is InputEventScreenDrag:
-		if touch_points.has(event.index):
-			var size := get_viewport_rect().size
-			if event.position.y >= size.y * 0.78:
-				if event.position.x < size.x * 0.22:
-					touch_points[event.index] = 0
-				elif event.position.x < size.x * 0.46:
-					touch_points[event.index] = 1
-				else:
-					touch_points[event.index] = 2
+	elif event is InputEventScreenDrag and touch_points.has(event.index):
+		var size := get_viewport_rect().size
+		if event.position.y >= size.y * 0.78:
+			if event.position.x < size.x * 0.22:
+				touch_points[event.index] = 0
+			elif event.position.x < size.x * 0.46:
+				touch_points[event.index] = 1
+			else:
+				touch_points[event.index] = 2
 
 func _juice(duration: float, time_scale: float) -> void:
 	Engine.time_scale = time_scale
