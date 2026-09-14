@@ -1,152 +1,121 @@
 # Maryou AI
 
-Maryou AI is an Android-only 2D endless auto-runner rebuilt in **Godot 4**. The current version is a vector-style, procedurally generated runner with touch controls, hazards, enemies, coins, shield power-ups, progressive difficulty, combo scoring, pause/game-over flows, and locally stored best scores.
+Maryou AI is an Android-only 2D endless auto-runner built with **Godot 4.7.2** and the **GL Compatibility** renderer.
 
-> **Package ID:** `com.maryou.ai`
-> **Engine:** Godot 4.7.2
+> Package ID: `com.maryou.ai`
 
-## Current status
+## Current architecture
 
-The project is being actively ported from the previous LibGDX implementation to Godot 4. The old LibGDX state is preserved in the `backup/libgdx-before-godot4-port` branch so the migration can be rolled back if necessary.
-
-The `master` branch is the Godot version.
-
-## Gameplay
-
-- **Auto-run:** the player continuously moves forward.
-- **Touch controls:** dedicated left, right, and jump zones for Android landscape play.
-- **Endless world:** terrain is generated procedurally as the player advances.
-- **Deterministic generation:** the world uses a fixed seed for reproducible layouts.
-- **Holes:** deliberate gaps are generated with spacing intended to keep the run readable and fair.
-- **Pipes:** standing pipes act as collision hazards; landing on top is safe while side contact causes damage.
-- **Enemies:** enemies can be stomped for bonus score; side contact causes damage.
-- **Coins:** collectible coins are generated throughout the run.
-- **Shield power-ups:** temporary protection is available during runs.
-- **Difficulty:** speed, hazards, and enemy pressure increase as distance progresses.
-- **Combo scoring:** successful actions can build the player's score multiplier.
-- **Death:** falling into a hole is fatal; damage is fatal once the player's protection/lives are exhausted.
-- **Pause:** gameplay and gameplay input are disabled while the pause overlay is open.
-
-## Godot architecture
-
-The Godot port uses a small, focused runtime architecture:
-
-- `CharacterBody2D` for the player.
-- Procedural chunk generation and bounded world cleanup.
-- Vector drawing for the player, enemies, terrain, pipes, coins, power-ups, and HUD elements.
-- Camera smoothing for a cleaner scrolling experience.
-- Local best-score persistence using Godot's `ConfigFile` storage.
-- Android export through Godot's Android exporter.
-
-The project intentionally avoids a large bitmap/sprite asset pack for the core gameplay visuals.
-
-## Controls
-
-The game is designed for Android landscape orientation.
-
-| Control | Action |
-|---|---|
-| Left | Move left |
-| Right | Move right |
-| Jump | Jump |
-| Pause | Pause the run |
-
-The touch areas are separated so movement and jumping do not unintentionally overlap.
-
-## Android
-
-- **Application ID:** `com.maryou.ai`
-- **App name:** `Maryou AI`
-- **Godot:** 4.7.2
-- **Minimum Android:** API 21
-- **Android build environment:** API 35 / Build Tools 35.0.1
-- **Java:** OpenJDK 17 in CI
-- **ABIs:** `armeabi-v7a`, `arm64-v8a`
-- **Orientation:** landscape
-- **Renderer:** Godot GL Compatibility renderer
-
-The Android export is configured as a **signed debug APK** for device testing. CI creates a temporary Android debug keystore, exports the APK, and verifies its signature with `apksigner` before publishing the artifact.
-
-For a Google Play release, a permanent release keystore must be used instead. Play distribution requires non-debug signing and new Google Play apps are distributed as Android App Bundles (AABs).
-
-## Build locally
-
-Install Godot 4.7.2 and the Android SDK. OpenJDK 17 is recommended for Android export.
-
-Validate the project:
-
-```bash
-godot --headless --path . --editor --quit
-```
-
-Export a debug APK:
-
-```bash
-godot --headless --path . --export-debug "Android" build/android/maryou-ai-debug.apk
-```
-
-For command-line exports, configure a debug keystore or set these environment variables before exporting:
-
-```bash
-export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore"
-export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
-export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
-```
-
-The local Godot editor can also export the Android preset directly.
-
-## GitHub Actions
-
-The repository includes `.github/workflows/android-build.yml`.
-
-On pushes and pull requests targeting `master`, the workflow:
-
-1. Installs Java 17 and the required Android SDK packages.
-2. Downloads Godot 4.7.2 and matching export templates.
-3. Creates a temporary Android debug keystore.
-4. Validates the Godot project.
-5. Exports a signed Android debug APK.
-6. Runs `apksigner verify` against the generated APK.
-7. Uploads the verified APK as the `maryou-ai-debug-apk` workflow artifact.
-
-## Installing the CI APK
-
-Download the `maryou-ai-debug-apk` artifact from the successful GitHub Actions run and install the APK on an Android device.
-
-If Android reports that an existing `com.maryou.ai` installation has a different signing key, uninstall the existing copy first and then install the new debug APK. Android does not allow an application to be updated with an APK signed by a different key.
-
-The CI build now signs each debug APK and verifies the signature before the artifact is uploaded. This fixes the previous unsigned-APK installation problem.
-
-## Project structure
+The Godot master branch is now the active implementation. The old LibGDX/Kotlin source and Gradle modules have been removed from `master`; the historical implementation remains available on the backup branch.
 
 ```text
 super-mario-ai/
 ├── project.godot
 ├── export_presets.cfg
-├── scenes/
-│   └── main.tscn
+├── scenes/main.tscn
 ├── scripts/
 │   ├── game.gd
 │   ├── player.gd
-│   └── enemy.gd
-├── .github/
-│   └── workflows/
-│       └── android-build.yml
-└── README.md
+│   ├── enemy.gd
+│   ├── world_generator.gd
+│   ├── chunk.gd
+│   ├── collectible.gd
+│   ├── hazard.gd
+│   ├── difficulty_curve.gd
+│   ├── score_manager.gd
+│   ├── hud.gd
+│   └── audio_manager.gd
+├── tests/
+└── .github/workflows/
 ```
 
-## Backup branch
+Gameplay orchestration is separated from world generation, difficulty, scoring, UI, collectibles, hazards, enemies, and audio settings. The core visuals remain procedural/vector-style with no heavy sprite pack.
 
-The previous LibGDX implementation is preserved at:
+## Gameplay improvements
+
+- Continuous speed curve instead of integer-division speed jumps.
+- Centralized difficulty tiers and spawn curves.
+- Coyote time and jump buffering for more forgiving mobile controls.
+- Resolution-independent touch zones.
+- Per-finger multitouch tracking.
+- Godot pause system via `get_tree().paused`.
+- Signal-driven coins, shield pickups, and pipe hazards instead of per-frame collectible/hazard rectangle polling.
+- Pipe tops remain physically landable while side/lower pipe contact is hazardous.
+- Three enemy behaviors: walker, flying/hopping enemy, and fast chaser.
+- Hit-stop feedback and invulnerability/knockback handling.
+- Hardened local best-score persistence.
+- Settings UI with independent Music/SFX buses and persisted volume values.
+
+## Android
+
+- Godot: 4.7.2
+- Renderer: GL Compatibility
+- Orientation: landscape
+- Minimum Android SDK: API 21
+- Target Android SDK: API 35
+- Architectures: `armeabi-v7a`, `arm64-v8a`
+- Java in CI: OpenJDK 17
+
+The debug export is an APK intended for device testing. The release workflow exports a signed Android App Bundle for Google Play when the release keystore secrets are configured. Godot's Android documentation confirms that Google Play distribution uses AAB and a non-debug signing key. citeturn0search0turn0search2
+
+## CI
+
+### Debug APK
+
+`.github/workflows/android-build.yml` runs on pushes and pull requests to `master` and:
+
+1. Installs Java, Android SDK and matching Godot 4.7.2 export templates.
+2. Validates the project.
+3. Runs the headless gameplay smoke test.
+4. Creates a temporary debug keystore.
+5. Exports the signed Android debug APK.
+6. Verifies the APK with `apksigner`.
+7. Uploads the APK artifact.
+
+### Release AAB
+
+`.github/workflows/release-aab.yml` is manually triggered and expects these GitHub Actions secrets:
+
+- `MARYOU_RELEASE_KEYSTORE_B64`
+- `MARYOU_RELEASE_KEY_ALIAS`
+- `MARYOU_RELEASE_KEY_PASSWORD`
+
+The keystore is reconstructed only inside the CI runner and is never committed to the repository.
+
+Godot's Gradle Android build is required for AAB export, and its command-line tooling supports installing the Android build template before export. citeturn2search1turn2search2
+
+## Local validation
+
+```bash
+godot --headless --path . --editor --quit
+godot --headless --path . --script tests/smoke_test_v2.gd
+godot --headless --path . --export-debug "Android Debug" build/android/maryou-ai-debug.apk
+```
+
+## Audio
+
+The project currently contains the audio architecture but no bundled music/SFX assets. `audio_manager.gd` creates separate Music and SFX buses and persists their volume settings. Audio assets can be added later under `res://audio/` without changing gameplay architecture.
+
+Recommended future asset layout:
 
 ```text
-backup/libgdx-before-godot4-port
+res://audio/
+├── music/
+│   ├── menu.ogg
+│   └── gameplay.ogg
+└── sfx/
+    ├── jump.wav
+    ├── land.wav
+    ├── coin.wav
+    ├── stomp.wav
+    ├── hit.wav
+    ├── shield.wav
+    ├── game_over.wav
+    └── ui_click.wav
 ```
 
-This branch is kept as a rollback/reference point while the Godot 4 version is stabilized.
+Use CC0/royalty-free assets or original generated audio and keep the corresponding license/source notes in the repository.
 
-## Development direction
+## Google Play signing
 
-The current priority is to make the Godot 4 Android build stable and installable, then continue improving gameplay, mobile UX, procedural generation, effects, audio, and release packaging.
-
-A production Google Play build will use a dedicated release keystore and should be exported as an Android App Bundle (AAB). The CI debug keystore is intentionally temporary and must never be used as the permanent signing key for a store release.
+Do not commit a production keystore or its password. The release workflow intentionally receives the release keystore through GitHub Actions secrets. Google Play uploads require a non-debug signing key and AAB packaging. citeturn0search0
