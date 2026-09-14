@@ -12,7 +12,8 @@ permissions:
 
 env:
   GODOT_VERSION: "4.7.2"
-  DOTNET_VERSION: "9.0.318"
+  DOTNET_SDK_VERSION: "9.0.318"
+  DOTNET_RUNTIME_VERSION: "8.0.30"
   ANDROID_API: "35"
   ANDROID_BUILD_TOOLS: "35.0.1"
   ANDROID_NDK: "28.1.13356709"
@@ -24,18 +25,49 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET 9
+      - name: Setup .NET SDK 9
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '${{ env.DOTNET_VERSION }}'
+          dotnet-version: "9.0.x"
 
-      - name: Verify .NET SDK
+      - name: Pin .NET SDK selection
         shell: bash
         run: |
           set -euxo pipefail
+          cat > global.json <<'EOF'
+          {
+            "sdk": {
+              "version": "9.0.318",
+              "rollForward": "latestPatch",
+              "allowPrerelease": false
+            }
+          }
+          EOF
           dotnet --version
-          dotnet --list-sdks
-          test "$(dotnet --version)" = "${DOTNET_VERSION}"
+          test "$(dotnet --version)" = "9.0.318"
+
+      - name: Install isolated .NET 8 runtime for Godot
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
+          chmod +x /tmp/dotnet-install.sh
+          rm -rf /opt/dotnet8
+          sudo mkdir -p /opt/dotnet8
+          sudo /tmp/dotnet-install.sh \
+            --runtime dotnet \
+            --version "${DOTNET_RUNTIME_VERSION}" \
+            --install-dir /opt/dotnet8 \
+            --no-path
+          test -x /opt/dotnet8/dotnet
+          /opt/dotnet8/dotnet --list-runtimes
+
+      - name: Verify isolated Godot runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          DOTNET_ROOT=/opt/dotnet8 DOTNET_MULTILEVEL_LOOKUP=0 /opt/dotnet8/dotnet --list-runtimes
+          test -d /opt/dotnet8/shared/Microsoft.NETCore.App/8.0.30
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -50,6 +82,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platform-tools" "platforms;android-${ANDROID_API}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${ANDROID_NDK}"
 
       - name: Create CI debug keystore
@@ -88,7 +121,7 @@ jobs:
           GODOT_ROOT="$(dirname "$GODOT_SHARP")"
           sudo cp -a "$GODOT_ROOT/." /opt/godot/
           sudo chmod +x "$(find /opt/godot -type f -name 'Godot_v*-stable_mono_linux.x86_64' -print -quit)"
-          sudo ln -sfn /opt/godot/GodotSharp /usr/local/bin/GodotSharp
+          sudo ln -sfn "$(find /opt/godot -type d -name GodotSharp -print -quit)" /usr/local/bin/GodotSharp
           INSTALLED_BIN="$(find /opt/godot -type f -name 'Godot_v*-stable_mono_linux.x86_64' -print -quit)"
           sudo ln -sfn "$INSTALLED_BIN" /usr/local/bin/godot
 
@@ -113,11 +146,14 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          rm -rf .godot/mono
+          rm -rf .godot/mono .godot/editor
           mkdir -p .godot/mono
 
       - name: Generate Godot C# solution
         shell: bash
+        env:
+          DOTNET_ROOT: /opt/dotnet8
+          DOTNET_MULTILEVEL_LOOKUP: "0"
         run: |
           set -euxo pipefail
           godot --headless --path . --editor --quit
@@ -135,24 +171,25 @@ jobs:
         run: |
           set -euxo pipefail
           test -s .godot/mono/temp/bin/Debug/super-mario-ai.dll
-          dotnet --info
+          echo "SDK: $(dotnet --version)"
           echo "Built assembly:"
           ls -lah .godot/mono/temp/bin/Debug/
 
-      - name: Register rebuilt C# assembly with Godot
+      - name: Verify Godot can load the rebuilt C# assembly
         shell: bash
+        env:
+          DOTNET_ROOT: /opt/dotnet8
+          DOTNET_MULTILEVEL_LOOKUP: "0"
         run: |
           set -euxo pipefail
-          godot --headless --path . --editor --quit --build-solutions
-
-      - name: Verify C# script registration
-        shell: bash
-        run: |
-          set -euxo pipefail
+          /opt/dotnet8/dotnet --list-runtimes
           godot --headless --path . --editor --quit --verbose
 
       - name: Run Godot C# smoke test
         shell: bash
+        env:
+          DOTNET_ROOT: /opt/dotnet8
+          DOTNET_MULTILEVEL_LOOKUP: "0"
         run: |
           set -euxo pipefail
           godot --headless --path . --script tests/smoke_test_v2.gd
@@ -160,6 +197,8 @@ jobs:
       - name: Export signed Android debug APK
         shell: bash
         env:
+          DOTNET_ROOT: /opt/dotnet8
+          DOTNET_MULTILEVEL_LOOKUP: "0"
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ runner.temp }}/android/debug.keystore
           GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
