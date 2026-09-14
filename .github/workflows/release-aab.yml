@@ -59,11 +59,6 @@ jobs:
           unzip -q /tmp/templates.tpz -d /tmp/godot-templates
           cp -R /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
 
-      - name: Install Godot Android Gradle template
-        run: |
-          set -euxo pipefail
-          godot --headless --path . --install-android-build-template --quit
-
       - name: Validate project
         run: godot --headless --path . --editor --quit
 
@@ -77,8 +72,15 @@ jobs:
           test -n "$GODOT_ANDROID_KEYSTORE_RELEASE_USER"
           test -n "$GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD"
           mkdir -p build/android
-          godot --headless --path . --export-release "Android Release AAB" build/android/maryou-ai-release.aab
+          godot --headless --path . --install-android-build-template --export-release "Android Release AAB" build/android/maryou-ai-release.aab
           test -s build/android/maryou-ai-release.aab
+
+      - name: Inspect AAB
+        run: |
+          set -euxo pipefail
+          command -v bundletool >/dev/null 2>&1 || true
+          ls -lh build/android/maryou-ai-release.aab
+          unzip -l build/android/maryou-ai-release.aab | head -40
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
