@@ -100,8 +100,9 @@ func _on_shield() -> void:
 		if has_node("/root/AudioManager"):
 			AudioManager.play_sfx("shield")
 
-func _on_hazard() -> void:
-	_take_damage()
+func _on_hazard(_player: MaryouPlayer) -> void:
+	# Hazard scenes already call player.take_damage(1). Keep this signal for shared feedback only.
+	_juice(0.04, 0.94)
 
 func _on_enemy_contact(_enemy: MaryouEnemy) -> void:
 	_take_damage()
@@ -116,10 +117,9 @@ func _take_damage() -> void:
 	if hit_lock or not ScoreManager.run_active or not is_instance_valid(player) or player.dead:
 		return
 	hit_lock = true
-	if player.take_hit():
+	if player.take_damage(1):
 		_finish_run()
 	else:
-		# A shield still protects the run from one hit.
 		_juice(0.05, 0.9)
 	await get_tree().create_timer(0.35, true, false, true).timeout
 	hit_lock = false
