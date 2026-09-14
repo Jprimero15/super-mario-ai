@@ -1,13 +1,15 @@
 using Godot;
 using System;
 
-public partial class MaryouHUD : CanvasLayer
+public partial class HUD : CanvasLayer
 {
     [Signal] public delegate void PausePressedEventHandler();
     [Signal] public delegate void RestartPressedEventHandler();
     [Signal] public delegate void BackPressedEventHandler();
     private Label? _scoreLabel, _statusLabel, _tierLabel, _titleLabel, _infoLabel;
-    private ColorRect? _overlay; private PanelContainer? _panel, _settingsPanel; private HSlider? _musicSlider, _sfxSlider;
+    private ColorRect? _overlay;
+    private PanelContainer? _panel, _settingsPanel;
+    private HSlider? _musicSlider, _sfxSlider;
 
     public override void _Ready() { ProcessMode = ProcessModeEnum.Always; Build(); }
 
@@ -21,10 +23,8 @@ public partial class MaryouHUD : CanvasLayer
         var right = new VBoxContainer { CustomMinimumSize = new Vector2(170, 0) }; row.AddChild(right);
         _tierLabel = Label("TIER 1   0m", 17); _tierLabel.HorizontalAlignment = HorizontalAlignment.Right; right.AddChild(_tierLabel);
         var pause = Button("PAUSE", 46); pause.ProcessMode = ProcessModeEnum.Always; pause.Pressed += () => EmitSignal(SignalName.PausePressed); right.AddChild(pause);
-
         var controls = new HBoxContainer { OffsetLeft = 18, OffsetTop = -102, OffsetRight = -18, OffsetBottom = -16, MouseFilter = Control.MouseFilterEnum.Stop }; controls.SetAnchorsPreset(Control.LayoutPreset.BottomWide); controls.AddThemeConstantOverride("separation", 10); root.AddChild(controls);
         AddControlButton(controls, "‹", "move_left", 82); AddControlButton(controls, "›", "move_right", 82); controls.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill }); AddControlButton(controls, "JUMP", "jump", 138);
-
         _overlay = new ColorRect { Color = new Color(.02f, .04f, .08f, .76f), Visible = false, MouseFilter = Control.MouseFilterEnum.Stop }; _overlay.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect); root.AddChild(_overlay);
         _panel = MakePanel(); root.AddChild(_panel); _settingsPanel = MakeSettings(); root.AddChild(_settingsPanel);
     }
@@ -46,8 +46,9 @@ public partial class MaryouHUD : CanvasLayer
         var p = new PanelContainer { OffsetLeft = -220, OffsetTop = -205, OffsetRight = 220, OffsetBottom = 205, Visible = false }; p.SetAnchorsPreset(Control.LayoutPreset.Center); p.AddThemeStyleboxOverride("panel", Box(new Color("#111d31"), 22));
         var box = new VBoxContainer(); box.AddThemeConstantOverride("separation", 10); p.AddChild(box);
         var title = Label("SETTINGS", 30); title.HorizontalAlignment = HorizontalAlignment.Center; box.AddChild(title); box.AddChild(Label("Music volume", 17));
-        _musicSlider = new HSlider { MinValue = 0, MaxValue = 1, Step = .01, Value = GetNode<AudioManager>("/root/AudioManager").MusicVolume }; _musicSlider.ValueChanged += v => GetNode<AudioManager>("/root/AudioManager").SetMusicVolume((float)v); box.AddChild(_musicSlider);
-        box.AddChild(Label("SFX volume", 17)); _sfxSlider = new HSlider { MinValue = 0, MaxValue = 1, Step = .01, Value = GetNode<AudioManager>("/root/AudioManager").SfxVolume }; _sfxSlider.ValueChanged += v => GetNode<AudioManager>("/root/AudioManager").SetSfxVolume((float)v); box.AddChild(_sfxSlider);
+        AudioManager audio = GetNode<AudioManager>("/root/AudioManager");
+        _musicSlider = new HSlider { MinValue = 0, MaxValue = 1, Step = .01, Value = audio.MusicVolume }; _musicSlider.ValueChanged += v => audio.SetMusicVolume((float)v); box.AddChild(_musicSlider);
+        box.AddChild(Label("SFX volume", 17)); _sfxSlider = new HSlider { MinValue = 0, MaxValue = 1, Step = .01, Value = audio.SfxVolume }; _sfxSlider.ValueChanged += v => audio.SetSfxVolume((float)v); box.AddChild(_sfxSlider);
         box.AddChild(Label("Touch controls are intentionally large for phones.", 14)); AddButton(box, "Close", () => ShowSettings(false)); return p;
     }
 
