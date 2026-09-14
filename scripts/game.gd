@@ -21,31 +21,38 @@ func _ready() -> void:
 	enemies = Node2D.new()
 	enemies.name = "Enemies"
 	add_child(enemies)
+
 	world = WorldScene.new()
 	world.name = "WorldGenerator"
+	add_child(world)
 	world.setup(enemies)
 	world.coin_collected.connect(_on_coin)
 	world.shield_collected.connect(_on_shield)
 	world.hazard_hit.connect(_on_hazard)
-	add_child(world)
+
 	player = PlayerScene.new()
 	player.name = "Player"
 	player.position = Vector2(180, GROUND_Y - 35)
 	add_child(player)
+
 	hud = HUDScene.new()
 	hud.name = "HUD"
 	hud.pause_pressed.connect(_toggle_pause)
 	hud.restart_pressed.connect(_restart)
 	hud.back_pressed.connect(_back_from_overlay)
 	add_child(hud)
+
 	world.generate_until(player.position.x, 0)
 	_wire_enemies()
 	queue_redraw()
 
 func _process(delta: float) -> void:
+	if not is_instance_valid(player) or not is_instance_valid(world) or not is_instance_valid(hud):
+		return
 	if Input.is_action_just_pressed("pause"):
 		_toggle_pause()
 		return
+
 	var distance := maxi(0, int(player.position.x / 32.0))
 	steps = maxi(steps, distance)
 	ScoreManager.steps = steps
@@ -56,8 +63,13 @@ func _process(delta: float) -> void:
 	var jump_pressed := Input.is_action_just_pressed("jump") or touch_jump_pressed
 	player.tick(delta, speed, left, right, jump_pressed, jump_held)
 	touch_jump_pressed = false
+
 	world.generate_until(player.position.x, steps)
 	_wire_enemies()
+	for child in enemies.get_children():
+		if is_instance_valid(child) and child is MaryouEnemy:
+			(child as MaryouEnemy).tick(delta, player.position.x)
+
 	if player.position.y > WORLD_HEIGHT + 80.0:
 		_finish_run()
 	hud.update_stats(ScoreManager.score(), ScoreManager.lives, ScoreManager.coins, ScoreManager.combo, MaryouDifficultyCurve.tier_for_steps(steps), int(player.position.x / 32.0))
@@ -78,7 +90,8 @@ func _on_coin() -> void:
 	ScoreManager.add_coin()
 
 func _on_shield() -> void:
-	player.activate_shield()
+	if is_instance_valid(player):
+		player.activate_shield()
 
 func _on_hazard() -> void:
 	_take_damage()
@@ -91,7 +104,7 @@ func _on_enemy_stomp(_enemy: MaryouEnemy) -> void:
 	_juice(0.06, 0.88)
 
 func _take_damage() -> void:
-	if hit_lock or ScoreManager.lives <= 0 or player.dead:
+	if hit_lock or ScoreManager.lives <= 0 or not is_instance_valid(player) or player.dead:
 		return
 	hit_lock = true
 	if player.take_hit():
@@ -108,19 +121,21 @@ func _take_damage() -> void:
 	hit_lock = false
 
 func _finish_run() -> void:
-	if player.dead:
+	if not is_instance_valid(player) or player.dead:
 		return
 	ScoreManager.finish_run()
 	player.kill()
 	get_tree().paused = false
-	hud.show_game_over(ScoreManager.score(), ScoreManager.best_score)
+	if is_instance_valid(hud):
+		hud.show_game_over(ScoreManager.score(), ScoreManager.best_score)
 
 func _toggle_pause() -> void:
-	if player.dead:
+	if not is_instance_valid(player) or player.dead:
 		return
 	var value := not get_tree().paused
 	get_tree().paused = value
-	hud.show_pause(value, ScoreManager.score(), ScoreManager.best_score)
+	if is_instance_valid(hud):
+		hud.show_pause(value, ScoreManager.score(), ScoreManager.best_score)
 
 func _restart() -> void:
 	get_tree().paused = false
