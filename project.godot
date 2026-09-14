@@ -10,6 +10,7 @@ config/icon="res://icon.svg"
 [autoload]
 ScoreManager="*res://scripts/score_manager.gd"
 AudioManager="*res://scripts/audio_manager.gd"
+GameState="*res://scripts/game_state.gd"
 
 [display]
 window/size/viewport_width=1280
@@ -24,6 +25,7 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.6118, 0.8431, 0.7529, 1)
 textures/default_filters/use_nearest_mipmap_filter=false
+textures/default_filters/default_filter=0
 textures/vram_compression/import_etc2_astc=true
 
 [physics]
