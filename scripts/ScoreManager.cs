@@ -1,5 +1,6 @@
 using Godot;
 
+[GlobalClass]
 public partial class ScoreManager : Node
 {
     private const string RecordsPath = "user://records.cfg";
@@ -81,9 +82,8 @@ public partial class ScoreManager : Node
 
     private void PlaySound(string type)
     {
-        AudioManager audio = GetNodeOrNull<AudioManager>("/root/AudioManager");
-        if (audio != null)
-            audio.PlaySfx(type);
+        AudioManager? audio = GetNodeOrNull<AudioManager>("/root/AudioManager");
+        audio?.PlaySfx(type);
     }
 
     private void LoadBest()
