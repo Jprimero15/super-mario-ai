@@ -1,9 +1,6 @@
-extends Area2D
+extends Node
 
 @export var spin_speed := 5.5
 
-func _ready() -> void:
-	add_to_group("hazards")
-
 func _process(delta: float) -> void:
-	$AnimatedSprite2D.rotation += spin_speed * delta
+	get_parent().get_node("AnimatedSprite2D").rotation += spin_speed * delta
