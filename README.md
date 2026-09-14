@@ -56,7 +56,7 @@ Gameplay orchestration is separated from world generation, difficulty, scoring, 
 - Architectures: `armeabi-v7a`, `arm64-v8a`
 - Java in CI: OpenJDK 17
 
-The debug export is an APK intended for device testing. The release workflow exports a signed Android App Bundle for Google Play when the release keystore secrets are configured. Godot's Android documentation confirms that Google Play distribution uses AAB and a non-debug signing key. citeturn0search0turn0search2
+The debug export is an APK intended for device testing. The release workflow exports a signed Android App Bundle for Google Play when the release keystore secrets are configured.
 
 ## CI
 
@@ -82,7 +82,7 @@ The debug export is an APK intended for device testing. The release workflow exp
 
 The keystore is reconstructed only inside the CI runner and is never committed to the repository.
 
-Godot's Gradle Android build is required for AAB export, and its command-line tooling supports installing the Android build template before export. citeturn2search1turn2search2
+Godot's Gradle Android build is used for AAB export.
 
 ## Local validation
 
@@ -118,4 +118,4 @@ Use CC0/royalty-free assets or original generated audio and keep the correspondi
 
 ## Google Play signing
 
-Do not commit a production keystore or its password. The release workflow intentionally receives the release keystore through GitHub Actions secrets. Google Play uploads require a non-debug signing key and AAB packaging. citeturn0search0
+Do not commit a production keystore or its password. The release workflow intentionally receives the release keystore through GitHub Actions secrets. Google Play distribution uses a non-debug signing key and AAB packaging.
