@@ -72,6 +72,12 @@ jobs:
           unzip -q /tmp/templates.tpz -d /tmp/godot-templates
           cp -R /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
 
+      - name: Install Android Gradle build template
+        shell: bash
+        run: |
+          set -euxo pipefail
+          godot --headless --path . --install-android-build-template --quit
+
       - name: Validate Godot project
         shell: bash
         run: |
