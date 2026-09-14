@@ -28,12 +28,10 @@ func _ready() -> void:
 	world.shield_collected.connect(_on_shield)
 	world.hazard_hit.connect(_on_hazard)
 	add_child(world)
-
 	player = PlayerScene.new()
 	player.name = "Player"
 	player.position = Vector2(180, GROUND_Y - 35)
 	add_child(player)
-
 	hud = HUDScene.new()
 	hud.name = "HUD"
 	hud.pause_pressed.connect(_toggle_pause)
@@ -55,7 +53,8 @@ func _process(delta: float) -> void:
 	var left := Input.is_action_pressed("move_left") or _touch_held(0)
 	var right := Input.is_action_pressed("move_right") or _touch_held(1)
 	var jump_held := Input.is_action_pressed("jump") or _touch_held(2)
-	player.tick(delta, speed, left, right, touch_jump_pressed, jump_held)
+	var jump_pressed := Input.is_action_just_pressed("jump") or touch_jump_pressed
+	player.tick(delta, speed, left, right, jump_pressed, jump_held)
 	touch_jump_pressed = false
 	world.generate_until(player.position.x, steps)
 	_wire_enemies()
