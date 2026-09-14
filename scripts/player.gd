@@ -7,10 +7,12 @@ const SIDE_ACCEL := 2100.0
 const MAX_SIDE_SPEED := 190.0
 const WIDTH := 38.0
 const HEIGHT := 54.0
+const HIT_INVULNERABILITY := 1.15
 
 var dead := false
 var shielded := false
 var shield_time := 0.0
+var hit_invulnerability := 0.0
 var squash := 1.0
 var stretch := 1.0
 var jump_held := false
@@ -34,6 +36,8 @@ func get_rect() -> Rect2:
 	return Rect2(position - Vector2(WIDTH * 0.5, HEIGHT * 0.5), Vector2(WIDTH, HEIGHT))
 
 func tick(delta: float, target_speed: float, left: bool, right: bool, jump: bool, allow_input := true) -> void:
+	if hit_invulnerability > 0.0:
+		hit_invulnerability = max(0.0, hit_invulnerability - delta)
 	if dead:
 		velocity.y += GRAVITY * delta
 		position += velocity * delta
@@ -73,15 +77,19 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump: bool
 	queue_redraw()
 
 func take_hit() -> bool:
-	if dead:
+	if dead or hit_invulnerability > 0.0:
 		return false
 	if shielded:
 		shielded = false
 		shield_time = 0.0
-		velocity.y = -260.0
+		hit_invulnerability = HIT_INVULNERABILITY
+		velocity.y = -300.0
 		squash = 0.82
 		queue_redraw()
 		return false
+	hit_invulnerability = HIT_INVULNERABILITY
+	squash = 0.82
+	queue_redraw()
 	return true
 
 func activate_shield() -> void:
@@ -100,7 +108,10 @@ func kill() -> void:
 func _draw() -> void:
 	var body := Rect2(-WIDTH * 0.5, -HEIGHT * 0.5, WIDTH, HEIGHT)
 	var scaled_body := Rect2(body.position.x, body.position.y + (HEIGHT * (1.0 - stretch)) * 0.25, body.size.x * squash, body.size.y * stretch)
-	draw_style_box(_box(Color("#2d6cdf"), 12.0), scaled_body)
+	var body_color := Color("#2d6cdf")
+	if hit_invulnerability > 0.0 and not dead:
+		body_color = Color("#5f8ff0") if int(hit_invulnerability * 12.0) % 2 == 0 else Color("#2d6cdf")
+	draw_style_box(_box(body_color, 12.0), scaled_body)
 	draw_circle(Vector2(-8, -18), 10, Color("#f4c7a1"))
 	draw_circle(Vector2(8, -18), 10, Color("#f4c7a1"))
 	draw_circle(Vector2(-5, -20), 2.5, Color("#1f2530"))
