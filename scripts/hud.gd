@@ -23,39 +23,58 @@ func _ready() -> void:
 func _build() -> void:
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
-	score_label = _label("SCORE 0", 24)
-	score_label.position = Vector2(28, 22)
-	root.add_child(score_label)
-	status_label = _label("LIVES 3   COINS 0   ×1", 20)
-	status_label.position = Vector2(28, 55)
-	root.add_child(status_label)
-	tier_label = _label("TIER 1   0m", 20)
-	tier_label.anchor_left = 1.0
-	tier_label.anchor_right = 1.0
-	tier_label.offset_left = -250
-	tier_label.offset_right = -85
-	tier_label.position.y = 28
-	root.add_child(tier_label)
+	var top := MarginContainer.new()
+	top.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	top.offset_left = 20.0
+	top.offset_top = 16.0
+	top.offset_right = -20.0
+	top.offset_bottom = 92.0
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(top)
+	var top_row := HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 16)
+	top.add_child(top_row)
 
+	var stats_box := VBoxContainer.new()
+	stats_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_row.add_child(stats_box)
+	score_label = _label("SCORE 0", 24)
+	stats_box.add_child(score_label)
+	status_label = _label("LIVES 3   COINS 0   ×1", 18)
+	stats_box.add_child(status_label)
+
+	var right_box := VBoxContainer.new()
+	right_box.custom_minimum_size = Vector2(180, 0)
+	top_row.add_child(right_box)
+	tier_label = _label("TIER 1   0m", 18)
+	tier_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	right_box.add_child(tier_label)
 	var pause := Button.new()
 	pause.text = "PAUSE"
-	pause.position = Vector2(1170, 18)
-	pause.size = Vector2(85, 48)
+	pause.custom_minimum_size = Vector2(0, 48)
 	pause.process_mode = Node.PROCESS_MODE_ALWAYS
+	pause.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	pause.pressed.connect(func(): pause_pressed.emit())
-	root.add_child(pause)
+	right_box.add_child(pause)
 
-	var controls := _label("◀   MOVE      ▶                         JUMP", 18)
-	controls.anchor_top = 1.0
-	controls.anchor_bottom = 1.0
-	controls.offset_left = 80
-	controls.offset_top = -62
-	controls.offset_right = 1200
-	controls.offset_bottom = -22
-	controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var controls := HBoxContainer.new()
+	controls.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	controls.offset_left = 24.0
+	controls.offset_top = -92.0
+	controls.offset_right = -24.0
+	controls.offset_bottom = -20.0
+	controls.add_theme_constant_override("separation", 12)
+	controls.mouse_filter = Control.MOUSE_FILTER_STOP
 	root.add_child(controls)
+	_add_control_button(controls, "◀", "move_left")
+	_add_control_button(controls, "▶", "move_right")
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	controls.add_child(spacer)
+	_add_control_button(controls, "JUMP", "jump", true)
 
 	overlay = ColorRect.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -76,10 +95,25 @@ func _label(text: String, size: int) -> Label:
 	label.add_theme_color_override("font_color", Color("#f4f6fb"))
 	return label
 
+func _add_control_button(parent: HBoxContainer, text: String, action: String, expand := false) -> void:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(86 if not expand else 140, 64)
+	if expand:
+		button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	button.add_theme_font_size_override("font_size", 20)
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.button_down.connect(func(): Input.action_press(action))
+	button.button_up.connect(func(): Input.action_release(action))
+	parent.add_child(button)
+
 func _make_panel(title: String) -> PanelContainer:
 	var p := PanelContainer.new()
-	p.position = Vector2(430, 185)
-	p.size = Vector2(420, 350)
+	p.set_anchors_preset(Control.PRESET_CENTER)
+	p.offset_left = -210.0
+	p.offset_top = -175.0
+	p.offset_right = 210.0
+	p.offset_bottom = 175.0
 	p.visible = false
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 12)
@@ -98,8 +132,11 @@ func _make_panel(title: String) -> PanelContainer:
 
 func _make_settings() -> PanelContainer:
 	var p := PanelContainer.new()
-	p.position = Vector2(430, 170)
-	p.size = Vector2(420, 380)
+	p.set_anchors_preset(Control.PRESET_CENTER)
+	p.offset_left = -210.0
+	p.offset_top = -190.0
+	p.offset_right = 210.0
+	p.offset_bottom = 190.0
 	p.visible = false
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
@@ -111,14 +148,14 @@ func _make_settings() -> PanelContainer:
 	music_slider = HSlider.new()
 	music_slider.min_value = 0.0
 	music_slider.max_value = 1.0
-	music_slider.value = 0.8
+	music_slider.value = AudioManager.music_volume if has_node("/root/AudioManager") else 0.8
 	music_slider.value_changed.connect(func(v): if has_node("/root/AudioManager"): AudioManager.set_music_volume(v))
 	box.add_child(music_slider)
 	box.add_child(_label("SFX volume", 18))
 	sfx_slider = HSlider.new()
 	sfx_slider.min_value = 0.0
 	sfx_slider.max_value = 1.0
-	sfx_slider.value = 0.9
+	sfx_slider.value = AudioManager.sfx_volume if has_node("/root/AudioManager") else 0.9
 	sfx_slider.value_changed.connect(func(v): if has_node("/root/AudioManager"): AudioManager.set_sfx_volume(v))
 	box.add_child(sfx_slider)
 	_add_button(box, "Close", func(): _show_settings(false))
@@ -132,8 +169,11 @@ func _add_button(parent: VBoxContainer, text: String, callback: Callable) -> voi
 	parent.add_child(button)
 
 func show_pause(value: bool, score: int, best: int) -> void:
+	if settings_panel.visible:
+		settings_panel.visible = false
 	overlay.visible = value
 	panel.visible = value
+	title_label.text = "PAUSED"
 	info_label.text = "Score %d   Best %d" % [score, best]
 	if value:
 		panel.modulate = Color(1, 1, 1, 0)
