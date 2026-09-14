@@ -25,12 +25,28 @@ static func pipe_chance(distance_steps: int) -> float:
 static func enemy_count(distance_steps: int) -> int:
 	return clampi(1 + int(distance_steps / 420.0), 0, 4)
 
-static func enemy_kind(distance_steps: int, index: int) -> int:
+static func enemy_kind(distance_steps: int, index: int, rng: RandomNumberGenerator = null) -> int:
 	var tier: int = tier_for_steps(distance_steps)
 	if tier <= 1: return 0
-	if tier == 2: return [0, 1, 0, 2][index % 4]
-	if tier == 3: return [0, 1, 2, 3, 0, 4][index % 6]
-	return [0, 1, 2, 3, 4, 5][index % 6]
+	if rng == null:
+		return [0, 1, 0, 2][index % 4]
+	var roll := rng.randf()
+	if tier == 2:
+		if roll < 0.55: return 0
+		if roll < 0.78: return 1
+		return 2
+	if tier == 3:
+		if roll < 0.34: return 0
+		if roll < 0.52: return 1
+		if roll < 0.70: return 2
+		if roll < 0.86: return 3
+		return 4
+	if roll < 0.24: return 0
+	if roll < 0.40: return 1
+	if roll < 0.56: return 2
+	if roll < 0.70: return 3
+	if roll < 0.86: return 4
+	return 5
 
 static func enemy_speed(kind: int, tier: int) -> float:
 	var speeds: Array[float] = [68.0, 82.0, 108.0, 76.0, 92.0, 70.0]
