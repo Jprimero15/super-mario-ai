@@ -76,26 +76,21 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump_press
 		queue_redraw()
 		return
 
-	# Buffer the jump input so a press just before landing is still honored.
 	if jump_pressed:
 		jump_buffer_timer = jump_buffer_time
 	else:
 		jump_buffer_timer = maxf(0.0, jump_buffer_timer - delta)
 
-	# Coyote time is refreshed while grounded and persists briefly after walking off an edge.
 	if is_on_floor():
 		coyote_timer = coyote_time
 	else:
 		coyote_timer = maxf(0.0, coyote_timer - delta)
 
 	var direction := 0.0
-	if left:
-		direction -= 1.0
-	if right:
-		direction += 1.0
+	if left: direction -= 1.0
+	if right: direction += 1.0
 	direction = clampf(direction, -1.0, 1.0)
 
-	# The runner has a forward target speed, while player input adds controlled air/ground steering.
 	var desired_x := target_speed + direction * max_side_speed
 	if direction != 0.0:
 		velocity.x = move_toward(velocity.x, desired_x, side_accel * delta)
@@ -108,7 +103,6 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump_press
 		coyote_timer = 0.0
 		stretch = 1.18
 
-	# Variable jump height: releasing jump shortens the ascent without snapping velocity to zero.
 	if not jump_held and velocity.y < jump_cut_velocity:
 		velocity.y = jump_cut_velocity
 
@@ -139,8 +133,8 @@ func _set_animation(name: String) -> void:
 	last_animation = name
 	animated_sprite.play(name)
 
-func take_hit() -> bool:
-	if dead or hit_invulnerability > 0.0:
+func take_damage(amount: int = 1) -> bool:
+	if amount <= 0 or dead or hit_invulnerability > 0.0:
 		return false
 	if shielded:
 		shielded = false
