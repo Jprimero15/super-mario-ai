@@ -1,4 +1,5 @@
 using Godot;
+using System;
 
 public partial class MaryouHUD : CanvasLayer
 {
@@ -50,7 +51,7 @@ public partial class MaryouHUD : CanvasLayer
         box.AddChild(Label("Touch controls are intentionally large for phones.", 14)); AddButton(box, "Close", () => ShowSettings(false)); return p;
     }
 
-    private void AddButton(VBoxContainer parent, string text, Callable callback) { var button = Button(text, 50); button.Pressed += () => callback.Call(); parent.AddChild(button); }
+    private void AddButton(VBoxContainer parent, string text, Action callback) { var button = Button(text, 50); button.Pressed += callback; parent.AddChild(button); }
     public void ShowPause(bool value, int score, int best) { if (_settingsPanel != null) _settingsPanel.Visible = false; _overlay!.Visible = value; _panel!.Visible = value; _titleLabel!.Text = "PAUSED"; _infoLabel!.Text = $"Score {score}   Best {best}"; AnimatePanel(value); }
     public void ShowGameOver(int score, int best) { _overlay!.Visible = true; _panel!.Visible = true; _titleLabel!.Text = "RUN COMPLETE"; _infoLabel!.Text = $"Score {score}   Best {best}"; AnimatePanel(true); }
     public void UpdateStats(int score, int lives, int coins, int combo, int tier, int meters) { _scoreLabel!.Text = $"SCORE {score}"; _statusLabel!.Text = $"LIVES {lives}   COINS {coins}   ×{Mathf.Max(1, combo)}"; _tierLabel!.Text = $"TIER {tier}   {meters}m"; }
