@@ -3,8 +3,6 @@ class_name MaryouPlayer
 
 const GRAVITY := 1850.0
 const JUMP_VELOCITY := -720.0
-const RUN_SPEED_START := 300.0
-const RUN_SPEED_CAP := 520.0
 const SIDE_ACCEL := 2100.0
 const MAX_SIDE_SPEED := 190.0
 const WIDTH := 38.0
@@ -26,10 +24,14 @@ func _ready() -> void:
 	add_child(collider)
 	queue_redraw()
 
+func get_rect() -> Rect2:
+	return Rect2(position - Vector2(WIDTH * 0.5, HEIGHT * 0.5), Vector2(WIDTH, HEIGHT))
+
 func tick(delta: float, target_speed: float, left: bool, right: bool, jump: bool, allow_input := true) -> void:
 	if dead:
 		velocity.y += GRAVITY * delta
-		position.y += velocity.y * delta
+		position += velocity * delta
+		queue_redraw()
 		return
 	var run_speed := target_speed
 	velocity.x = run_speed
