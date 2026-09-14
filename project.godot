@@ -1,15 +1,15 @@
-; Maryou AI - Godot 4.7.2
+; Maryou AI - Godot 4.7.2 .NET
 config_version=5
 
 [application]
 config/name="Maryou AI"
 run/main_scene="res://scenes/main.tscn"
-config/features=PackedStringArray("4.7", "GL Compatibility")
+config/features=PackedStringArray("4.7", "GL Compatibility", "C#")
 config/icon="res://icon.svg"
 
 [autoload]
-ScoreManager="*res://scripts/score_manager.gd"
-AudioManager="*res://scripts/audio_manager.gd"
+ScoreManager="*res://scripts/ScoreManager.cs"
+AudioManager="*res://scripts/AudioManager.cs"
 
 [display]
 window/size/viewport_width=1280
