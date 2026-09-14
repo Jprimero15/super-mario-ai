@@ -8,9 +8,12 @@ const TILES := preload("res://assets/world/tiles.svg")
 const WORLD_HEIGHT: float = 720.0
 const GROUND_Y: float = 560.0
 const BACKDROP_WIDTH: float = 2048.0
+const BACKGROUND_HEIGHT: float = 256.0
 const GROUND_TILE_SIZE: float = 32.0
 const BACKGROUND_PARALLAX: float = 0.18
 const PANORAMA_PATH := "res://assets/world/background_panorama.png"
+const PANORAMA_GROUND_Y: float = 560.0
+const PANORAMA_ART_BOTTOM: float = 207.0
 
 var player: MaryouPlayer
 var world: MaryouWorldGenerator
@@ -209,12 +212,17 @@ func _juice(duration: float, time_scale: float, token: int) -> void:
 
 func _draw() -> void:
 	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
+
 	if background_panorama != null:
-		var parallax_offset := cam_x * BACKGROUND_PARALLAX
-		var first_x := floorf((parallax_offset - BACKDROP_WIDTH) / BACKDROP_WIDTH) * BACKDROP_WIDTH
+		# The PNG has transparent sky and a ~207px-tall painted landscape.
+		# Keep it at native resolution so the art is not vertically stretched,
+		# and anchor its land edge exactly to the gameplay ground line.
+		var bg_origin_x := cam_x * (1.0 - BACKGROUND_PARALLAX)
+		var first_x := floorf((bg_origin_x - BACKDROP_WIDTH) / BACKDROP_WIDTH) * BACKDROP_WIDTH
+		var panorama_y := PANORAMA_GROUND_Y - PANORAMA_ART_BOTTOM
 		for i in range(4):
-			var x := first_x + float(i) * BACKDROP_WIDTH - parallax_offset
-			draw_texture_rect(background_panorama, Rect2(x, -40.0, BACKDROP_WIDTH, WORLD_HEIGHT), false)
+			var x := first_x + float(i) * BACKDROP_WIDTH
+			draw_texture_rect(background_panorama, Rect2(x, panorama_y, BACKDROP_WIDTH, BACKGROUND_HEIGHT), false)
 	else:
 		# Fallback for builds where the new panorama has not been imported yet.
 		var first_x: float = floorf((cam_x - 1600.0) / 720.0) * 720.0
