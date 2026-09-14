@@ -77,7 +77,7 @@ func _physics_process(delta: float) -> void:
 
 	if player.position.y > WORLD_HEIGHT + 80.0:
 		_finish_run()
-	hud.update_stats(ScoreManager.score(), ScoreManager.lives, ScoreManager.coins, ScoreManager.multiplier(), MaryouDifficultyCurve.tier_for_steps(steps), int(player.position.x / 32.0))
+	hud.update_stats(ScoreManager.score(), 1, ScoreManager.coins, ScoreManager.multiplier(), MaryouDifficultyCurve.tier_for_steps(steps), int(player.position.x / 32.0))
 	queue_redraw()
 
 func _wire_enemies() -> void:
@@ -113,20 +113,15 @@ func _on_enemy_stomp(_enemy: MaryouEnemy) -> void:
 	_juice(0.06, 0.88)
 
 func _take_damage() -> void:
-	if hit_lock or ScoreManager.lives <= 0 or not is_instance_valid(player) or player.dead:
+	if hit_lock or not ScoreManager.run_active or not is_instance_valid(player) or player.dead:
 		return
 	hit_lock = true
 	if player.take_hit():
-		var dead_now: bool = ScoreManager.damage()
-		if dead_now:
-			_finish_run()
-		else:
-			player.position += Vector2(110.0, -60.0)
-			player.velocity = Vector2(MaryouDifficultyCurve.speed_for_steps(steps) * 0.75, -360.0)
-			_juice(0.08, 0.82)
+		_finish_run()
 	else:
+		# A shield still protects the run from one hit.
 		_juice(0.05, 0.9)
-	await get_tree().create_timer(1.15, true, false, true).timeout
+	await get_tree().create_timer(0.35, true, false, true).timeout
 	hit_lock = false
 
 func _finish_run() -> void:
@@ -143,8 +138,7 @@ func _toggle_pause() -> void:
 		return
 	var value: bool = not get_tree().paused
 	get_tree().paused = value
-	if is_instance_valid(hud):
-		hud.show_pause(value, ScoreManager.score(), ScoreManager.best_score)
+	if is_instance_valid(hud): hud.show_pause(value, ScoreManager.score(), ScoreManager.best_score)
 
 func _restart() -> void:
 	get_tree().paused = false
