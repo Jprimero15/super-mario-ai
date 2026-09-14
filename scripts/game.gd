@@ -141,8 +141,7 @@ func _input(event: InputEvent) -> void:
 				touch_points[event.index] = zone
 				if zone == 2: touch_jump_pressed = true
 			else: touch_points[event.index] = -1
-		else:
-			touch_points.erase(event.index)
+		else: touch_points.erase(event.index)
 	elif event is InputEventScreenDrag and touch_points.has(event.index):
 		var size: Vector2 = get_viewport_rect().size
 		if event.position.y >= size.y * 0.78:
@@ -156,9 +155,22 @@ func _juice(duration: float, time_scale: float) -> void:
 	Engine.time_scale = 1.0
 
 func _draw() -> void:
+	# Calm forest backdrop: sky, layered tree line, distant hills, and a grassy running land.
 	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
-	draw_rect(Rect2(cam_x - 1500.0, -300.0, 3500.0, 1100.0), Color("#101827"))
-	for i in range(10):
-		var x: float = cam_x - 1100.0 + float(i) * 260.0
-		var y: float = 350.0 + sin(float(i) * 0.9) * 28.0
-		draw_circle(Vector2(x, y), 80.0, Color("#162238"))
+	draw_rect(Rect2(cam_x - 1600.0, -400.0, 4200.0, 1000.0), Color("#9bd7c0"))
+	# distant hills
+	for i in range(12):
+		var hx: float = cam_x - 1500.0 + float(i) * 280.0
+		var hy: float = 430.0 + sin(float(i) * 1.7) * 28.0
+		draw_circle(Vector2(hx, hy), 150.0, Color("#78b99d"))
+	# forest canopy silhouettes
+	for i in range(18):
+		var tx: float = cam_x - 1500.0 + float(i) * 175.0
+		var ty: float = 475.0 + sin(float(i) * 1.3) * 22.0
+		draw_rect(Rect2(tx - 9.0, ty, 18.0, 105.0), Color("#4d7d5e"))
+		draw_circle(Vector2(tx, ty), 58.0, Color("#35664b"))
+		draw_circle(Vector2(tx - 35.0, ty + 20.0), 42.0, Color("#407657"))
+		draw_circle(Vector2(tx + 34.0, ty + 18.0), 44.0, Color("#407657"))
+	# playable land under the character
+	draw_rect(Rect2(cam_x - 1600.0, GROUND_Y + 32.0, 4200.0, 200.0), Color("#5b3f2b"))
+	draw_rect(Rect2(cam_x - 1600.0, GROUND_Y + 32.0, 4200.0, 18.0), Color("#6ea34d"))
