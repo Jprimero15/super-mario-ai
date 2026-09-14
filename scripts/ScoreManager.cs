@@ -2,16 +2,17 @@ using Godot;
 
 public partial class ScoreManager : Node
 {
-    public int Steps { get; set; }
+    public int Steps { get; private set; }
     public int Coins { get; private set; }
     public int Combo { get; private set; }
-    public int Lives { get; private set; }
+    public int Lives { get; private set; } = 3;
     public int BestScore { get; private set; }
     public bool RunActive { get; private set; }
 
+    private const string RecordsPath = "user://records.cfg";
+
     public override void _Ready()
     {
-        Lives = 3;
         LoadBest();
     }
 
@@ -26,14 +27,14 @@ public partial class ScoreManager : Node
 
     public void AddCoin()
     {
-        Coins += 1;
-        Combo += 1;
+        Coins++;
+        Combo++;
         PlaySound("coin");
     }
 
     public void AddStomp()
     {
-        Combo += 1;
+        Combo++;
         PlaySound("stomp");
     }
 
@@ -42,7 +43,7 @@ public partial class ScoreManager : Node
         if (Lives <= 0)
             return false;
 
-        Lives -= 1;
+        Lives--;
         Combo = 0;
         PlaySound("hit");
         return Lives <= 0;
@@ -80,7 +81,9 @@ public partial class ScoreManager : Node
     private void LoadBest()
     {
         ConfigFile config = new ConfigFile();
-        if (config.Load("user://records.cfg") != Error.Ok)
+        Error error = config.Load(RecordsPath);
+
+        if (error != Error.Ok)
         {
             BestScore = 0;
             return;
@@ -95,7 +98,8 @@ public partial class ScoreManager : Node
         ConfigFile config = new ConfigFile();
         config.SetValue("records", "best_score", BestScore);
 
-        if (config.Save("user://records.cfg") != Error.Ok)
-            GD.PushWarning("Could not save records.cfg");
+        Error error = config.Save(RecordsPath);
+        if (error != Error.Ok)
+            GD.PushWarning("Could not save records.cfg: " + error);
     }
 }
