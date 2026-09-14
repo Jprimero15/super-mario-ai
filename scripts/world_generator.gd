@@ -2,7 +2,6 @@ extends Node2D
 class_name MaryouWorldGenerator
 
 signal coin_collected
-signal shield_collected
 signal hazard_hit
 
 const CHUNK_WIDTH := 640.0
@@ -10,9 +9,9 @@ const TILE := 32.0
 const GROUND_Y := 560.0
 const SEED := 20260914
 const ChunkScript := preload("res://scripts/chunk.gd")
-const CollectibleScript := preload("res://scripts/collectible.gd")
 const HazardScript := preload("res://scripts/hazard.gd")
 const EnemyScript := preload("res://scripts/enemy.gd")
+const CoinFrames := preload("res://assets/sprites/coin_frames.tres")
 const PipeTexture := preload("res://assets/sprites/pipe.svg")
 
 # Reusable obstacle scenes. The generator places the real interactive scenes,
@@ -96,8 +95,6 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 			for attempt in range(10):
 				var obstacle_x := start_x + float(rng.randi_range(8, 18)) * TILE
 				var obstacle_y := GROUND_Y - 32.0
-				# Raised/solid hazards use a higher placement; ground hazards sit on
-				# the surface and use their own collision shape offsets.
 				if obstacle_index in [0, 2, 3, 4, 5, 7, 9, 11, 13]:
 					obstacle_y = GROUND_Y - 34.0
 				var obstacle_rect := Rect2(obstacle_x - 28.0, obstacle_y - 32.0, 56.0, 64.0)
@@ -126,13 +123,14 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 			_add_solid(root, fallback)
 			_add_hazard(root, fallback)
 
+	# Coins are the only remaining pickup. They use coin.svg through the
+	# dedicated four-frame SpriteFrames resource; the old collectibles sheet
+	# and shield pickup are intentionally no longer part of level generation.
 	var coin_count := rng.randi_range(2, 4)
 	for i in range(coin_count):
 		var coin_pos := Vector2(start_x + float(rng.randi_range(7, 18)) * TILE, GROUND_Y - float(rng.randi_range(92, 190)))
-		if _safe(Rect2(coin_pos - Vector2(15, 15), Vector2(30, 30)), occupied, holes, 10.0): _add_collectible(root, coin_pos, "coin")
-	if distance_steps >= 650 and rng.randf() < 0.22:
-		var power_pos := Vector2(start_x + float(rng.randi_range(14, 19)) * TILE, GROUND_Y - 120.0)
-		if _safe(Rect2(power_pos - Vector2(15, 15), Vector2(30, 30)), occupied, holes, 10.0): _add_collectible(root, power_pos, "shield")
+		if _safe(Rect2(coin_pos - Vector2(15, 15), Vector2(30, 30)), occupied, holes, 10.0):
+			_add_coin(root, coin_pos)
 
 	var count := MaryouDifficultyCurve.enemy_count(distance_steps)
 	if chunk_index == 0: count = 0
@@ -192,16 +190,34 @@ func _add_hazard(parent: Node2D, pipe: Rect2) -> void:
 	area.hit_player.connect(func(_hit_player: MaryouPlayer): hazard_hit.emit(_hit_player))
 	parent.add_child(area)
 
-func _add_collectible(parent: Node2D, position: Vector2, kind: String) -> void:
-	var item := CollectibleScript.new()
-	item.position = position
-	item.setup(kind)
-	item.collected.connect(_on_collectible)
-	parent.add_child(item)
+func _add_coin(parent: Node2D, position: Vector2) -> void:
+	var coin := Area2D.new()
+	coin.name = "Coin"
+	coin.collision_layer = 0
+	coin.collision_mask = 1
+	coin.monitoring = true
+	coin.position = position
 
-func _on_collectible(kind: String) -> void:
-	if kind == "shield": shield_collected.emit()
-	else: coin_collected.emit()
+	var shape := CircleShape2D.new()
+	shape.radius = 15.0
+	var collider := CollisionShape2D.new()
+	collider.shape = shape
+	coin.add_child(collider)
+
+	var sprite := AnimatedSprite2D.new()
+	sprite.sprite_frames = CoinFrames
+	sprite.animation = &"spin"
+	sprite.autoplay = &"spin"
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.scale = Vector2(0.55, 0.55)
+	coin.add_child(sprite)
+
+	coin.body_entered.connect(func(body: Node2D) -> void:
+		if body is MaryouPlayer:
+			coin_collected.emit()
+			coin.queue_free()
+	)
+	parent.add_child(coin)
 
 func _safe(rect: Rect2, occupied: Array[Rect2], holes: Array[Rect2], padding: float) -> bool:
 	var expanded := rect.grow(padding)
