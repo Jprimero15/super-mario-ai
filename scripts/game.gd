@@ -9,7 +9,7 @@ const WORLD_HEIGHT: float = 720.0
 const GROUND_Y: float = 560.0
 const VIEW_WIDTH: float = 1280.0
 const BACKDROP_WIDTH: float = 720.0
-const BACKGROUND_TILE_SIZE: float = 384.0
+const BACKGROUND_TILE_SIZE: float = 256.0
 
 var player: MaryouPlayer
 var world: MaryouWorldGenerator
@@ -36,8 +36,6 @@ func _ready() -> void:
 	world.hazard_hit.connect(_on_hazard)
 	player = PlayerScene.new()
 	player.name = "Player"
-	# Match the 50px gameplay body to the sprite's visible feet instead of
-	# leaving the character noticeably floating above the generated ground.
 	player.position = Vector2(180, GROUND_Y - 30.0)
 	add_child(player)
 	hud = HUDScene.new()
@@ -183,7 +181,7 @@ func _juice(duration: float, time_scale: float) -> void:
 
 func _draw() -> void:
 	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
-	# The uploaded 1536x384 texture contains four 384x384 seasonal tiles.
+	# backgrounds.svg is a 1024x256 four-season sheet: four 256x256 tiles.
 	# Rotate seasons every 500 distance steps: spring -> summer -> autumn -> winter.
 	var season: int = posmod(steps / 500, 4)
 	var source_x: float = float(season) * BACKGROUND_TILE_SIZE
