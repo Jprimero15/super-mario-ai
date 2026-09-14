@@ -13,5 +13,6 @@ func _on_body_entered(body: Node2D) -> void:
 	if active or not body is MaryouPlayer:
 		return
 	active = true
-	$AnimatedSprite2D.play("active")
+	GameState.set_checkpoint(global_position)
+	$AnimatedSprite2D.play("checkpoint_active")
 	checkpoint_reached.emit(global_position)
