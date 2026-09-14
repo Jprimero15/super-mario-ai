@@ -4,6 +4,7 @@ class_name MaryouCollectible
 signal collected(kind: String)
 
 const COIN_FRAMES := preload("res://assets/sprites/coin_frames.tres")
+const COLLECTIBLES := preload("res://assets/world/collectibles.svg")
 
 var kind := "coin"
 var active := true
@@ -37,5 +38,5 @@ func _on_body_entered(body: Node2D) -> void:
 
 func _draw() -> void:
 	if kind == "shield":
-		draw_circle(Vector2.ZERO, 14.0, Color("#59d9c4"))
-		draw_arc(Vector2.ZERO, 18.0, 0.0, TAU, 24, Color("#d9fff8"), 3.0)
+		# Shield is the 8th 64x64 cell in the new collectible sheet.
+		draw_texture_rect_region(COLLECTIBLES, Rect2(-22.0, -22.0, 44.0, 44.0), Rect2(448.0, 0.0, 64.0, 64.0))
