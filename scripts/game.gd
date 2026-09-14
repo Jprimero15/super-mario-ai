@@ -54,6 +54,7 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("pause"):
 		_toggle_pause()
 		return
+
 	var distance: int = maxi(0, int(player.position.x / 32.0))
 	steps = maxi(steps, distance)
 	ScoreManager.steps = steps
@@ -66,12 +67,14 @@ func _physics_process(delta: float) -> void:
 		AudioManager.play_sfx("jump")
 	player.tick(delta, speed, left, right, jump_pressed, jump_held)
 	touch_jump_pressed = false
+
 	world.generate_until(player.position.x, steps)
 	_wire_enemies()
 	for child in enemies.get_children():
 		if is_instance_valid(child) and child is MaryouEnemy:
 			var enemy: MaryouEnemy = child as MaryouEnemy
 			enemy.tick(delta, player.position.x)
+
 	if player.position.y > WORLD_HEIGHT + 80.0:
 		_finish_run()
 	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps))
@@ -189,10 +192,21 @@ func _draw() -> void:
 		draw_texture_rect_region(Rect2(0.0, 0.0, BACKDROP_WIDTH, 720.0), BACKGROUNDS, Rect2(source_x, 0.0, BACKGROUND_TILE_SIZE, BACKGROUND_TILE_SIZE))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-	# tiles.svg first tile is a 64x64 grass-terrain tile. Draw its top and
-	# lower halves separately so the ground uses the real artwork cleanly.
-	var ground_start: float = floorf((cam_x - 1700.0) / GROUND_TILE_SIZE) * GROUND_TILE_SIZE
-	for i in range(108):
-		var x: float = ground_start + float(i) * GROUND_TILE_SIZE
-		draw_texture_rect_region(Rect2(x, GROUND_Y, GROUND_TILE_SIZE, GROUND_TILE_SIZE), TILES, Rect2(0.0, 0.0, 64.0, 32.0))
-		draw_texture_rect_region(Rect2(x, GROUND_Y + GROUND_TILE_SIZE, GROUND_TILE_SIZE, GROUND_TILE_SIZE), TILES, Rect2(0.0, 32.0, 64.0, 32.0))
+	# Draw only the ground rectangles that the world generator actually made.
+	# Holes therefore remain visually open and always match their collision.
+	var first_visible_x: float = cam_x - 1700.0
+	var last_visible_x: float = cam_x + 1900.0
+	for chunk_value in world.active_chunks.values():
+		if not is_instance_valid(chunk_value):
+			continue
+		var chunk: MaryouChunk = chunk_value as MaryouChunk
+		if chunk == null:
+			continue
+		for solid in chunk.solids:
+			if solid.end.x < first_visible_x or solid.position.x > last_visible_x:
+				continue
+			draw_texture_rect_region(
+				solid,
+				TILES,
+				Rect2(0.0, 0.0, 64.0, 64.0)
+			)
