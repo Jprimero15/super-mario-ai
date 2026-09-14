@@ -107,6 +107,12 @@ jobs:
       - name: Build C# project
         run: dotnet build super-mario-ai.csproj --configuration Debug --no-restore
 
+      - name: Load and build Godot C# solution
+        shell: bash
+        run: |
+          set -euxo pipefail
+          godot --headless --path . --editor --quit --build-solutions
+
       - name: Validate Godot project
         shell: bash
         run: |
