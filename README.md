@@ -67,11 +67,11 @@ The touch areas are separated so movement and jumping do not unintentionally ove
 
 The Android export is configured as a **signed debug APK** for device testing. CI creates a temporary Android debug keystore, exports the APK, and verifies its signature with `apksigner` before publishing the artifact.
 
-For a Google Play release, a permanent release keystore must be used instead. Godot's Android documentation requires APK/AAB uploads for Play to use a non-debug signing key. citeturn0search0turn1search0
+For a Google Play release, a permanent release keystore must be used instead. Play distribution requires non-debug signing and new Google Play apps are distributed as Android App Bundles (AABs).
 
 ## Build locally
 
-Install Godot 4.7.2 and the Android SDK. Godot recommends OpenJDK 17 for Android export. citeturn0search5
+Install Godot 4.7.2 and the Android SDK. OpenJDK 17 is recommended for Android export.
 
 Validate the project:
 
@@ -83,6 +83,14 @@ Export a debug APK:
 
 ```bash
 godot --headless --path . --export-debug "Android" build/android/maryou-ai-debug.apk
+```
+
+For command-line exports, configure a debug keystore or set these environment variables before exporting:
+
+```bash
+export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore"
+export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
+export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
 ```
 
 The local Godot editor can also export the Android preset directly.
@@ -101,15 +109,13 @@ On pushes and pull requests targeting `master`, the workflow:
 6. Runs `apksigner verify` against the generated APK.
 7. Uploads the verified APK as the `maryou-ai-debug-apk` workflow artifact.
 
-A signed APK is required for normal Android installation; Godot exposes separate debug-keystore settings for Android exports. citeturn1search0turn0search4
-
 ## Installing the CI APK
 
 Download the `maryou-ai-debug-apk` artifact from the successful GitHub Actions run and install the APK on an Android device.
 
-If Android reports that an existing `com.maryou.ai` installation has a different signing key, uninstall the existing copy first and then install the new debug APK. Godot documents this as a common Android installation issue when the same package name is signed with a different key. citeturn0search5
+If Android reports that an existing `com.maryou.ai` installation has a different signing key, uninstall the existing copy first and then install the new debug APK. Android does not allow an application to be updated with an APK signed by a different key.
 
-The CI build now signs the debug APK consistently within each build, so a previous installation signed by another key may still need to be removed once when switching builds.
+The CI build now signs each debug APK and verifies the signature before the artifact is uploaded. This fixes the previous unsigned-APK installation problem.
 
 ## Project structure
 
@@ -143,4 +149,4 @@ This branch is kept as a rollback/reference point while the Godot 4 version is s
 
 The current priority is to make the Godot 4 Android build stable and installable, then continue improving gameplay, mobile UX, procedural generation, effects, audio, and release packaging.
 
-A production Google Play build will use a dedicated release keystore and should be exported as an Android App Bundle (AAB). New Google Play apps are distributed as AABs, and Play uploads must use non-debug signing. citeturn0search0
+A production Google Play build will use a dedicated release keystore and should be exported as an Android App Bundle (AAB). The CI debug keystore is intentionally temporary and must never be used as the permanent signing key for a store release.
