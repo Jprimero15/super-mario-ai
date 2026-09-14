@@ -15,7 +15,26 @@ const HazardScript := preload("res://scripts/hazard.gd")
 const EnemyScript := preload("res://scripts/enemy.gd")
 const PipeTexture := preload("res://assets/sprites/pipe.svg")
 const ENVIRONMENT := preload("res://assets/world/environment.svg")
-const OBSTACLES := preload("res://assets/world/obstacles.svg")
+
+# Reusable obstacle scenes. The generator places the real interactive scenes,
+# rather than drawing decorative atlas regions, so collision and behavior stay
+# in one source of truth.
+const OBSTACLE_SCENES := [
+	preload("res://scenes/obstacles/platform.tscn"),
+	preload("res://scenes/obstacles/spikes.tscn"),
+	preload("res://scenes/obstacles/crumbling_platform.tscn"),
+	preload("res://scenes/obstacles/small_crumble.tscn"),
+	preload("res://scenes/obstacles/conveyor.tscn"),
+	preload("res://scenes/obstacles/saw.tscn"),
+	preload("res://scenes/obstacles/lava.tscn"),
+	preload("res://scenes/obstacles/rock.tscn"),
+	preload("res://scenes/obstacles/pit.tscn"),
+	preload("res://scenes/obstacles/mace.tscn"),
+	preload("res://scenes/obstacles/acid.tscn"),
+	preload("res://scenes/obstacles/crate.tscn"),
+	preload("res://scenes/obstacles/bounce_pad.tscn"),
+	preload("res://scenes/obstacles/checkpoint.tscn")
+]
 
 var generated_to := -1
 var active_chunks: Dictionary = {}
@@ -73,6 +92,30 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 			else:
 				_add_environment(root, decor_x, 160)
 
+	# Spawn the actual obstacle scenes into the generated level. Each chunk gets
+	# at least one scene from the full 14-type rotation, with extra hazards as
+	# difficulty rises. This guarantees every obstacle type appears in normal
+	# endless gameplay while preserving safe spacing around pipes/holes/enemies.
+	if chunk_index > 0:
+		var obstacle_count := 1
+		if distance_steps >= 350: obstacle_count = 2
+		if distance_steps >= 1000: obstacle_count = 3
+		for obstacle_slot in range(obstacle_count):
+			var obstacle_index := posmod(chunk_index - 1 + obstacle_slot * 5, OBSTACLE_SCENES.size())
+			var obstacle_scene: PackedScene = OBSTACLE_SCENES[obstacle_index]
+			for attempt in range(10):
+				var obstacle_x := start_x + float(rng.randi_range(8, 18)) * TILE
+				var obstacle_y := GROUND_Y - 32.0
+				# Raised/solid hazards use a higher placement; ground hazards sit on
+				# the surface and use their own collision shape offsets.
+				if obstacle_index in [0, 2, 3, 4, 5, 7, 9, 11, 13]:
+					obstacle_y = GROUND_Y - 34.0
+				var obstacle_rect := Rect2(obstacle_x - 28.0, obstacle_y - 32.0, 56.0, 64.0)
+				if _safe(obstacle_rect, occupied, holes, 36.0) and obstacle_x > safe_gap_until:
+					_add_obstacle(root, obstacle_scene, Vector2(obstacle_x, obstacle_y), obstacle_index)
+					occupied.append(obstacle_rect)
+					break
+
 	var pipe_attempts := 1 + int(distance_steps / 500)
 	var pipes_placed := 0
 	for i in range(pipe_attempts):
@@ -115,6 +158,17 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 				occupied.append(enemy_rect)
 				break
 
+func _add_obstacle(parent: Node2D, scene: PackedScene, position: Vector2, index: int) -> void:
+	var obstacle := scene.instantiate()
+	obstacle.name = "Obstacle_%02d_%s" % [index, scene.resource_path.get_file().get_basename()]
+	obstacle.position = position
+	parent.add_child(obstacle)
+	# Checkpoints are progression markers rather than damage hazards. They still
+	# live in the hazards group for centralized reset/query behavior, but their
+	# own scene script handles the checkpoint signal.
+	if index == 13 and obstacle.has_method("set_checkpoint_position"):
+		obstacle.set_checkpoint_position(position)
+
 func _add_solid(parent: Node2D, rect: Rect2) -> void:
 	var body := StaticBody2D.new()
 	body.collision_layer = 2
@@ -135,12 +189,12 @@ func _add_solid(parent: Node2D, rect: Rect2) -> void:
 
 func _add_hole_warning(parent: Node2D, hole: Rect2) -> void:
 	var sprite := Sprite2D.new()
-	sprite.texture = OBSTACLES
+	sprite.texture = preload("res://assets/world/obstacles.svg")
 	sprite.region_enabled = true
-	sprite.region_rect = Rect2(200.0, 8.0, 58.0, 60.0)
+	sprite.region_rect = Rect2(0.0, 128.0, 64.0, 64.0)
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.position = Vector2(hole.position.x + hole.size.x * 0.5, GROUND_Y - 18.0)
-	sprite.scale = Vector2(hole.size.x / 58.0, 0.72)
+	sprite.scale = Vector2(hole.size.x / 64.0, 0.72)
 	parent.add_child(sprite)
 
 func _add_environment(parent: Node2D, x: float, source_y: float) -> void:
@@ -166,7 +220,7 @@ func _add_hazard(parent: Node2D, pipe: Rect2) -> void:
 	var hazard_height := maxf(10.0, pipe.size.y - 20.0)
 	area.position = pipe.position + Vector2(pipe.size.x * 0.5, pipe.size.y * 0.5 + 10.0)
 	area.setup(Vector2(pipe.size.x + 8.0, hazard_height))
-	area.hit_player.connect(func(): hazard_hit.emit())
+	area.hit_player.connect(func(_hit_player: MaryouPlayer): hazard_hit.emit(_hit_player))
 	parent.add_child(area)
 
 func _add_collectible(parent: Node2D, position: Vector2, kind: String) -> void:
