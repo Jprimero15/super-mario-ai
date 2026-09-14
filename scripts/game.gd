@@ -180,14 +180,21 @@ func _juice(duration: float, time_scale: float) -> void:
 
 func _draw() -> void:
 	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
-	# backgrounds.svg is a 1024x256 four-season sheet: four 256x256 tiles.
-	# Rotate seasons every 500 distance steps: spring -> summer -> autumn -> winter.
+	# backgrounds.svg is a 1024x256 four-season sheet. Keep the selected
+	# season, but mirror every other backdrop tile so the repeated forest edges
+	# meet continuously instead of producing hard vertical seams.
 	var season: int = posmod(steps / 500, 4)
 	var source_x: float = float(season) * BACKGROUND_TILE_SIZE
 	var first_x: float = floorf((cam_x - 1600.0) / BACKDROP_WIDTH) * BACKDROP_WIDTH
 	for i in range(6):
 		var x: float = first_x + float(i) * BACKDROP_WIDTH
-		draw_texture_rect_region(BACKGROUNDS, Rect2(x, -40.0, BACKDROP_WIDTH, 720.0), Rect2(source_x, 0.0, BACKGROUND_TILE_SIZE, BACKGROUND_TILE_SIZE))
+		if i % 2 == 0:
+			draw_set_transform(Vector2(x, -40.0), 0.0, Vector2.ONE)
+		else:
+			draw_set_transform(Vector2(x + BACKDROP_WIDTH, -40.0), 0.0, Vector2(-1.0, 1.0))
+		draw_texture_rect_region(Rect2(0.0, 0.0, BACKDROP_WIDTH, 720.0), BACKGROUNDS, Rect2(source_x, 0.0, BACKGROUND_TILE_SIZE, BACKGROUND_TILE_SIZE))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
 	var ground_start: float = floorf((cam_x - 1700.0) / 32.0) * 32.0
 	for i in range(108):
 		var x: float = ground_start + float(i) * 32.0
