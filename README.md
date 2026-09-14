@@ -13,6 +13,14 @@ super-mario-ai/
 ├── project.godot
 ├── icon.svg
 ├── export_presets.cfg
+├── assets/
+│   └── sprites/
+│       ├── maryou.svg
+│       ├── maryou_frames.tres
+│       ├── enemies.svg
+│       ├── enemy_frames.tres
+│       ├── coin.svg
+│       └── coin_frames.tres
 ├── scenes/main.tscn
 ├── scripts/
 │   ├── game.gd
@@ -30,7 +38,16 @@ super-mario-ai/
 └── .github/workflows/
 ```
 
-Gameplay orchestration is separated from world generation, difficulty, scoring, UI, collectibles, hazards, enemies, and audio settings. Visuals are procedural/vector-style and do not depend on a heavy sprite pack.
+Gameplay orchestration is separated from world generation, difficulty, scoring, UI, collectibles, hazards, enemies, and audio settings. The active characters, enemies, and coin now use lightweight original SVG sprite atlases with Godot `SpriteFrames` animation resources; the forest backdrop and terrain remain procedural so the game stays lightweight.
+
+## Sprite system
+
+- Original Maryou player sprite atlas with idle, run, jump, fall, hurt, and dead animation rows.
+- Six original enemy archetype rows with four animation frames each.
+- Animated four-frame coin atlas.
+- Godot 4.7.2 `SpriteFrames` resources use `AtlasTexture` regions and nearest filtering for crisp rendering.
+- `AnimatedSprite2D` is used by the player, enemies, and coins instead of the old procedural character/coin drawings.
+- Sprite assets live under `res://assets/sprites/` and can be replaced independently without changing gameplay logic.
 
 ## Gameplay
 
@@ -55,7 +72,7 @@ Gameplay orchestration is separated from world generation, difficulty, scoring, 
 - Animated pause/game-over panel transitions.
 - Music and SFX volume controls with persisted settings.
 - Large touch controls designed for phones.
-- Procedural/vector-style game visuals and a dedicated application icon.
+- Original sprite-based gameplay visuals plus a procedural forest environment and dedicated application icon.
 
 ## Android build
 
