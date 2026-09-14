@@ -314,7 +314,7 @@ func _request_restart() -> void:
 		return
 	restart_confirmed = true
 	restart_button.text = "CONFIRM RESTART"
-	get_tree().create_timer(2.5, false).timeout.connect(_restart_button_reset)
+	get_tree().create_timer(2.5, true).timeout.connect(_restart_button_reset)
 
 func _restart_button_reset() -> void:
 	restart_confirmed = false
