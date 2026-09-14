@@ -1,5 +1,6 @@
 using Godot;
 
+[GlobalClass]
 public partial class AudioManager : Node
 {
     private const string SettingsPath = "user://settings.cfg";
@@ -38,13 +39,10 @@ public partial class AudioManager : Node
 
     public void PlaySfx(string type)
     {
-        if (string.IsNullOrEmpty(type) || SfxVolume <= 0.0f)
+        if (string.IsNullOrEmpty(type) || SfxVolume <= 0.0f || _sfxPlayers.Length == 0)
             return;
 
-        if (_sfxPlayers.Length == 0)
-            return;
-
-        AudioStream stream = LoadSfx(type);
+        AudioStream? stream = LoadSfx(type);
         if (stream == null)
             return;
 
@@ -54,12 +52,12 @@ public partial class AudioManager : Node
         player.Play();
     }
 
-    private AudioStream LoadSfx(string type)
+    private AudioStream? LoadSfx(string type)
     {
         string oggPath = "res://audio/sfx/" + type + ".ogg";
         if (ResourceLoader.Exists(oggPath))
         {
-            AudioStream ogg = ResourceLoader.Load<AudioStream>(oggPath);
+            AudioStream? ogg = ResourceLoader.Load<AudioStream>(oggPath);
             if (ogg != null)
                 return ogg;
         }
@@ -67,7 +65,7 @@ public partial class AudioManager : Node
         string wavPath = "res://audio/sfx/" + type + ".wav";
         if (ResourceLoader.Exists(wavPath))
         {
-            AudioStream wav = ResourceLoader.Load<AudioStream>(wavPath);
+            AudioStream? wav = ResourceLoader.Load<AudioStream>(wavPath);
             if (wav != null)
                 return wav;
         }
@@ -103,12 +101,13 @@ public partial class AudioManager : Node
             return;
 
         if (value <= 0.0f)
-            AudioServer.SetBusMute(busIndex, true);
-        else
         {
-            AudioServer.SetBusMute(busIndex, false);
-            AudioServer.SetBusVolumeDb(busIndex, Mathf.LinearToDb(value));
+            AudioServer.SetBusMute(busIndex, true);
+            return;
         }
+
+        AudioServer.SetBusMute(busIndex, false);
+        AudioServer.SetBusVolumeDb(busIndex, Mathf.LinearToDb(value));
     }
 
     private void EnsureBus(string busName)
