@@ -53,6 +53,8 @@ func _ready() -> void:
 	animated_sprite.position = Vector2(0, -2)
 	animated_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	animated_sprite.speed_scale = 1.0
+	# Maryou's default runner direction is always right.
+	animated_sprite.flip_h = false
 	add_child(animated_sprite)
 	camera = Camera2D.new()
 	camera.position = Vector2(250, -30)
@@ -135,8 +137,15 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump_press
 		_set_animation("idle")
 
 	if is_instance_valid(animated_sprite):
-		if absf(direction) > 0.01:
-			animated_sprite.flip_h = direction < 0.0
+		# Facing is controlled explicitly by the current touch/keyboard input.
+		# Releasing the left button immediately restores the normal right-facing
+		# runner pose. If both are held, right takes priority.
+		if right:
+			animated_sprite.flip_h = false
+		elif left:
+			animated_sprite.flip_h = true
+		else:
+			animated_sprite.flip_h = false
 		if last_animation == "run":
 			animated_sprite.speed_scale = clampf(absf(velocity.x) / 180.0, 0.85, 1.75)
 		else:
