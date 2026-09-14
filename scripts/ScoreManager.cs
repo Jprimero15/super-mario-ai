@@ -2,7 +2,7 @@ using Godot;
 
 public partial class ScoreManager : Node
 {
-    public int Steps { get; private set; }
+    public int Steps { get; set; }
     public int Coins { get; private set; }
     public int Combo { get; private set; }
     public int Lives { get; private set; }
