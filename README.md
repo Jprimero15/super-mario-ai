@@ -1,6 +1,6 @@
 # Maryou AI
 
-Maryou AI is an **Android-focused 2D endless auto-runner** built with **Godot 4.7.2** and the **GL Compatibility** renderer. The player runs continuously through a stylized forest landscape, jumping over gaps, pipes, enemies, moving hazards, and collecting coins.
+Maryou AI is an **Android-focused 2D endless auto-runner** built with **Godot 4.7.2** and the **GL Compatibility** renderer. The player runs continuously through a stylized forest landscape, jumping over gaps, enemies, moving hazards, and collecting coins.
 
 > Package ID: `com.maryou.ai`
 
@@ -40,9 +40,10 @@ super-mario-ai/
 
 - Endless auto-running movement with large mobile touch controls.
 - Coyote time and jump buffering for forgiving jumps.
-- Smooth speed, gap, pipe, and enemy-density progression.
+- Smooth speed, gap, and enemy-density progression.
 - Procedurally generated chunks with a new run seed for replayable variety and deterministic regeneration within that run.
 - Bounded ground-enemy patrols plus chase/flying variants instead of every enemy endlessly reversing toward the player.
+- Four elemental enemy variants: fire, water, thunder, and shadow.
 - Checkpoints persist in `GameState` and can be used on the next restart after a death.
 - Conveyors actively influence the player's horizontal velocity.
 - Rocks roll back and forth as moving hazards.
