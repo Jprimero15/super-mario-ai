@@ -53,7 +53,7 @@ region = Rect2(192, 192, 64, 64)
 
 [resource]
 animations = [
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_0")}], "loop": true, "name": &"idle", "speed": 1.0},
+{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_0")}, {"duration": 1.0, "texture": SubResource("Maryou_1")}], "loop": true, "name": &"idle", "speed": 2.5},
 {"frames": [{"duration": 1.0, "texture": SubResource("Maryou_1")}], "loop": false, "name": &"idle_alt", "speed": 1.0},
 {"frames": [{"duration": 1.0, "texture": SubResource("Maryou_2")}], "loop": false, "name": &"run_1", "speed": 1.0},
 {"frames": [{"duration": 1.0, "texture": SubResource("Maryou_3")}], "loop": false, "name": &"run_2", "speed": 1.0},
@@ -65,10 +65,11 @@ animations = [
 {"frames": [{"duration": 1.0, "texture": SubResource("Maryou_9")}], "loop": false, "name": &"hurt", "speed": 1.0},
 {"frames": [{"duration": 1.0, "texture": SubResource("Maryou_10")}], "loop": false, "name": &"action", "speed": 1.0},
 {"frames": [{"duration": 1.0, "texture": SubResource("Maryou_11")}], "loop": false, "name": &"celebrate", "speed": 1.0},
+{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_12")}, {"duration": 1.0, "texture": SubResource("Maryou_13")}], "loop": true, "name": &"climb", "speed": 6.0},
 {"frames": [{"duration": 1.0, "texture": SubResource("Maryou_12")}], "loop": false, "name": &"climb_1", "speed": 1.0},
 {"frames": [{"duration": 1.0, "texture": SubResource("Maryou_13")}], "loop": false, "name": &"climb_2", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_14")}], "loop": false, "name": &"swim", "speed": 1.0},
+{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_14")}], "loop": true, "name": &"swim", "speed": 6.0},
 {"frames": [{"duration": 1.0, "texture": SubResource("Maryou_15")}], "loop": false, "name": &"victory", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_2")}, {"duration": 1.0, "texture": SubResource("Maryou_3")}, {"duration": 1.0, "texture": SubResource("Maryou_4")}, {"duration": 1.0, "texture": SubResource("Maryou_5")}], "loop": true, "name": &"run", "speed": 10.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_9")}], "loop": false, "name": &"dead", "speed": 6.0}
+{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_9")}], "loop": false, "name": &"dead", "speed": 6.0},
+{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_2")}, {"duration": 1.0, "texture": SubResource("Maryou_3")}, {"duration": 1.0, "texture": SubResource("Maryou_4")}, {"duration": 1.0, "texture": SubResource("Maryou_5")}], "loop": true, "name": &"run", "speed": 10.0}
 ]
