@@ -146,7 +146,6 @@ func _input(event: InputEvent) -> void:
 				elif p.x < size.x * 0.46: zone = 1
 				touch_points[event.index] = zone
 				if zone == 2: touch_jump_pressed = true
-			else: touch_points[event.index] = -1
 		else: touch_points.erase(event.index)
 	elif event is InputEventScreenDrag and touch_points.has(event.index):
 		var size: Vector2 = get_viewport_rect().size
@@ -162,16 +161,16 @@ func _juice(duration: float, time_scale: float) -> void:
 
 func _draw() -> void:
 	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
-	var biome := mini(steps / 500, 2)
-	var source_x := float(biome) * 256.0
+	var biome: int = mini(steps / 500, 2)
+	var source_x: float = float(biome) * 256.0
 	# Use the new 3-strip background as a large repeating parallax-style backdrop.
-	var first_x := floor((cam_x - 1600.0) / BACKDROP_WIDTH) * BACKDROP_WIDTH
+	var first_x: float = floorf((cam_x - 1600.0) / BACKDROP_WIDTH) * BACKDROP_WIDTH
 	for i in range(6):
-		var x := first_x + float(i) * BACKDROP_WIDTH
+		var x: float = first_x + float(i) * BACKDROP_WIDTH
 		draw_texture_rect_region(BACKGROUNDS, Rect2(x, -40.0, BACKDROP_WIDTH, 720.0), Rect2(source_x, 0.0, 256.0, 256.0))
 	# Tile the playable ground with the new grass/soil tile instead of flat colors.
-	var ground_start := floor((cam_x - 1700.0) / 32.0) * 32.0
+	var ground_start: float = floorf((cam_x - 1700.0) / 32.0) * 32.0
 	for i in range(108):
-		var x := ground_start + float(i) * 32.0
+		var x: float = ground_start + float(i) * 32.0
 		draw_texture_rect_region(TILES, Rect2(x, GROUND_Y + 32.0, 32.0, 32.0), Rect2(0.0, 0.0, 64.0, 64.0))
 		draw_texture_rect_region(TILES, Rect2(x, GROUND_Y, 32.0, 32.0), Rect2(0.0, 0.0, 64.0, 32.0))
