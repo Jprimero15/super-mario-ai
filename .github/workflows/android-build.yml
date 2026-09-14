@@ -38,6 +38,22 @@ jobs:
           set -euxo pipefail
           sdkmanager "platform-tools" "platforms;android-${ANDROID_API}" "build-tools;${ANDROID_BUILD_TOOLS}" "ndk;${ANDROID_NDK}"
 
+      - name: Create CI debug keystore
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p "$RUNNER_TEMP/android"
+          keytool -genkeypair \
+            -keystore "$RUNNER_TEMP/android/debug.keystore" \
+            -storepass android \
+            -keypass android \
+            -alias androiddebugkey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -deststoretype pkcs12
+
       - name: Download Godot 4.7.2
         shell: bash
         run: |
@@ -62,13 +78,23 @@ jobs:
           set -euxo pipefail
           godot --headless --path . --editor --quit
 
-      - name: Export Android debug APK
+      - name: Export signed Android debug APK
         shell: bash
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ runner.temp }}/android/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           set -euxo pipefail
           mkdir -p build/android
           godot --headless --path . --export-debug "Android" build/android/maryou-ai-debug.apk
           test -s build/android/maryou-ai-debug.apk
+
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          set -euxo pipefail
+          "${ANDROID_HOME}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner" verify --verbose build/android/maryou-ai-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
