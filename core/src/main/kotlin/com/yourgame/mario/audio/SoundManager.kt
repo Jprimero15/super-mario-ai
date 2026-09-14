@@ -7,10 +7,16 @@ import java.io.DataOutputStream
 import kotlin.math.PI
 import kotlin.math.sin
 
-/** Small original arcade sound bank generated locally at runtime; no copyrighted samples. */
+/** Original runtime-generated arcade sound bank with persistent volume controls. */
 class SoundManager {
     private val sounds = HashMap<String, Sound>()
     private val directory = Gdx.files.local(".maryou_sounds")
+    private val prefs = Gdx.app.getPreferences("maryou_settings")
+
+    var masterVolume: Float = prefs.getFloat("sfxVolume", 0.45f).coerceIn(0f, 1f)
+        private set
+    var muted: Boolean = prefs.getBoolean("sfxMuted", false)
+        private set
 
     init {
         directory.mkdirs()
@@ -29,7 +35,7 @@ class SoundManager {
             if (!file.exists()) file.writeBytes(makeWav(duration, startHz, endHz), false)
             sounds[name] = Gdx.audio.newSound(file)
         } catch (_: Throwable) {
-            // Audio is optional: gameplay must continue even if a platform audio backend fails.
+            // Audio is optional so gameplay remains functional on devices without a working backend.
         }
     }
 
@@ -42,7 +48,8 @@ class SoundManager {
             val progress = i.toFloat() / count.coerceAtLeast(1)
             val hz = startHz + (endHz - startHz) * progress
             val envelope = (1f - progress).coerceAtLeast(0f) * (0.75f + 0.25f * sin(PI * progress)).toFloat()
-            val sample = (sin(2.0 * PI * hz * t) * 0.55 * envelope * Short.MAX_VALUE).toInt().coerceIn(-32768, 32767)
+            val sample = (sin(2.0 * PI * hz * t) * 0.55 * envelope * Short.MAX_VALUE)
+                .toInt().coerceIn(-32768, 32767)
             pcm[i * 2] = (sample and 0xff).toByte()
             pcm[i * 2 + 1] = ((sample ushr 8) and 0xff).toByte()
         }
@@ -56,6 +63,23 @@ class SoundManager {
         return out.toByteArray()
     }
 
-    fun play(name: String, volume: Float = 0.45f) { sounds[name]?.play(volume) }
-    fun dispose() { sounds.values.forEach { it.dispose() }; sounds.clear() }
+    fun setMasterVolume(value: Float) {
+        masterVolume = value.coerceIn(0f, 1f)
+        prefs.putFloat("sfxVolume", masterVolume).flush()
+    }
+
+    fun setMuted(value: Boolean) {
+        muted = value
+        prefs.putBoolean("sfxMuted", muted).flush()
+    }
+
+    fun play(name: String, volume: Float = 1f) {
+        if (muted) return
+        sounds[name]?.play((volume * masterVolume).coerceIn(0f, 1f))
+    }
+
+    fun dispose() {
+        sounds.values.forEach { it.dispose() }
+        sounds.clear()
+    }
 }
