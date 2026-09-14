@@ -1,177 +1,146 @@
 # Maryou AI
 
-A Kotlin + LibGDX Android endless platform runner with responsive touch controls, procedural hazards, vector artwork, progressive difficulty, and locally recorded run statistics.
+Maryou AI is an Android-only 2D endless auto-runner rebuilt in **Godot 4**. The current version is a vector-style, procedurally generated runner with touch controls, hazards, enemies, coins, shield power-ups, progressive difficulty, combo scoring, pause/game-over flows, and locally stored best scores.
 
 > **Package ID:** `com.maryou.ai`
+> **Engine:** Godot 4.7.2
 
-## Current gameplay
+## Current status
 
-- **Auto-run:** the character continuously runs forward.
-- **Progressive speed:** run speed increases every 100 steps, gradually up to a safe cap.
-- **Endless world:** procedural chunks are generated ahead of the player with no fixed finish line.
-- **Monster progression:** monster encounters begin after the opening and scale from small to medium to large as distance increases, with the major tier progression changing every 200 steps.
-- **Standing pipes:** pipes are real collision obstacles with varied heights and spacing.
-- **Pipe rule:** landing on the top of a pipe is safe; running into its side costs a life/power state.
-- **Monsters:** jumping on a monster defeats it and gives bonus score; side contact costs a life/power state.
-- **Holes:** deliberate 1–2 tile gaps are generated with readable dark vector interiors and safe spacing from other hazards.
-- **Coins:** coins are placed with overlap protection so they do not visually stack with pipes or other obstacles.
-- **Checkpoints:** progress checkpoints move forward during long runs.
-- **Game over:** falling into a hole or taking fatal damage ends the run after lives are exhausted.
+The project is being actively ported from the previous LibGDX implementation to Godot 4. The old LibGDX state is preserved in the `backup/libgdx-before-godot4-port` branch so the migration can be rolled back if necessary.
 
-## Run records
+The `master` branch is the Godot version.
 
-Every completed run records its best values locally on the device using LibGDX preferences:
+## Gameplay
 
-- Best score
-- Best coins collected
-- Best steps reached
+- **Auto-run:** the player continuously moves forward.
+- **Touch controls:** dedicated left, right, and jump zones for Android landscape play.
+- **Endless world:** terrain is generated procedurally as the player advances.
+- **Deterministic generation:** the world uses a fixed seed for reproducible layouts.
+- **Holes:** deliberate gaps are generated with spacing intended to keep the run readable and fair.
+- **Pipes:** standing pipes act as collision hazards; landing on top is safe while side contact causes damage.
+- **Enemies:** enemies can be stomped for bonus score; side contact causes damage.
+- **Coins:** collectible coins are generated throughout the run.
+- **Shield power-ups:** temporary protection is available during runs.
+- **Difficulty:** speed, hazards, and enemy pressure increase as distance progresses.
+- **Combo scoring:** successful actions can build the player's score multiplier.
+- **Death:** falling into a hole is fatal; damage is fatal once the player's protection/lives are exhausted.
+- **Pause:** gameplay and gameplay input are disabled while the pause overlay is open.
 
-The current run also displays score, lives, steps, coins, and current speed in the HUD. The game-over screen shows the final run statistics.
+## Godot architecture
+
+The Godot port uses a small, focused runtime architecture:
+
+- `CharacterBody2D` for the player.
+- Procedural chunk generation and bounded world cleanup.
+- Vector drawing for the player, enemies, terrain, pipes, coins, power-ups, and HUD elements.
+- Camera smoothing for a cleaner scrolling experience.
+- Local best-score persistence using Godot's `ConfigFile` storage.
+- Android export through Godot's Android exporter.
+
+The project intentionally avoids a large bitmap/sprite asset pack for the core gameplay visuals.
 
 ## Controls
 
-The game is designed for Android landscape play.
+The game is designed for Android landscape orientation.
 
 | Control | Action |
 |---|---|
-| Left | Steer left while auto-running |
-| Right | Steer right while auto-running |
-| Jump | Jump; hold for a higher jump |
+| Left | Move left |
+| Right | Move right |
+| Jump | Jump |
 | Pause | Pause the run |
 
-The controls occupy a dedicated bottom band, keeping them away from the character and gameplay. Their visual buttons are compact while the invisible touch targets are larger for reliable mobile input. The input controller samples multiple touch pointers every frame, so steering and jumping can be used together.
-
-## UI/UX direction
-
-The current UI uses:
-
-- Measured/centered HUD text to prevent overlapping labels.
-- Four evenly spaced top HUD cards for score, lives, steps, and coins.
-- A compact lower status line for auto-run, steps, coins, and speed.
-- Soft translucent panels instead of heavy opaque controls.
-- Consistent blue/green/gold/red accent colors.
-- A redesigned pause panel with clean restart/menu actions.
-- A redesigned main menu with clear hierarchy and saved-record preview.
-- Responsive landscape viewport separation so the gameplay area remains visually clear above the touch-control strip.
-
-## Vector artwork
-
-Gameplay artwork is rendered with LibGDX `ShapeRenderer` primitives, keeping the core visuals resolution-independent without a large bitmap asset pack.
-
-Vector-style artwork includes:
-
-- Player
-- Small/medium/large monsters
-- Animated coins
-- Ground and grass tiles
-- Standing pipes
-- Designed holes
-- Touch controls
-- Pause/restart/menu icons
-- HUD panels
-- Android launcher icon
-
-## Endless procedural architecture
-
-`Level.kt` generates deterministic chunks from a seed as the player approaches unexplored terrain. Each chunk can contain:
-
-1. Ground terrain.
-2. Deliberate holes with readable spacing.
-3. Elevated coin routes.
-4. Standing pipes with varying heights.
-5. Monster encounters whose tiers scale with distance.
-
-Generated solids are added to the runtime collision grid through `CollisionHandler`, so newly generated terrain and pipes immediately participate in physics.
-
-The world is generated incrementally rather than storing a giant map in memory.
+The touch areas are separated so movement and jumping do not unintentionally overlap.
 
 ## Android
 
 - **Application ID:** `com.maryou.ai`
-- **Android namespace:** `com.maryou.ai`
 - **App name:** `Maryou AI`
+- **Godot:** 4.7.2
 - **Minimum Android:** API 21
-- **Compile SDK:** 34
-- **Target SDK:** 34
-- **Java:** 11
-- **LibGDX:** 1.12.1
-- **Supported ABIs:** `armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`
-- **Orientation:** sensor landscape
-- **Launcher icon:** custom Android vector drawable
+- **Android build environment:** API 35 / Build Tools 35.0.1
+- **Java:** OpenJDK 17 in CI
+- **ABIs:** `armeabi-v7a`, `arm64-v8a`
+- **Orientation:** landscape
+- **Renderer:** Godot GL Compatibility renderer
+
+The Android export is configured as a **signed debug APK** for device testing. CI creates a temporary Android debug keystore, exports the APK, and verifies its signature with `apksigner` before publishing the artifact.
+
+For a Google Play release, a permanent release keystore must be used instead. Godot's Android documentation requires APK/AAB uploads for Play to use a non-debug signing key. citeturn0search0turn1search0
+
+## Build locally
+
+Install Godot 4.7.2 and the Android SDK. Godot recommends OpenJDK 17 for Android export. citeturn0search5
+
+Validate the project:
+
+```bash
+godot --headless --path . --editor --quit
+```
+
+Export a debug APK:
+
+```bash
+godot --headless --path . --export-debug "Android" build/android/maryou-ai-debug.apk
+```
+
+The local Godot editor can also export the Android preset directly.
+
+## GitHub Actions
+
+The repository includes `.github/workflows/android-build.yml`.
+
+On pushes and pull requests targeting `master`, the workflow:
+
+1. Installs Java 17 and the required Android SDK packages.
+2. Downloads Godot 4.7.2 and matching export templates.
+3. Creates a temporary Android debug keystore.
+4. Validates the Godot project.
+5. Exports a signed Android debug APK.
+6. Runs `apksigner verify` against the generated APK.
+7. Uploads the verified APK as the `maryou-ai-debug-apk` workflow artifact.
+
+A signed APK is required for normal Android installation; Godot exposes separate debug-keystore settings for Android exports. citeturn1search0turn0search4
+
+## Installing the CI APK
+
+Download the `maryou-ai-debug-apk` artifact from the successful GitHub Actions run and install the APK on an Android device.
+
+If Android reports that an existing `com.maryou.ai` installation has a different signing key, uninstall the existing copy first and then install the new debug APK. Godot documents this as a common Android installation issue when the same package name is signed with a different key. citeturn0search5
+
+The CI build now signs the debug APK consistently within each build, so a previous installation signed by another key may still need to be removed once when switching builds.
 
 ## Project structure
 
 ```text
 super-mario-ai/
-├── core/
-│   └── src/main/kotlin/com/yourgame/mario/
-│       ├── MarioGame.kt
-│       ├── entities/
-│       │   ├── Entity.kt
-│       │   ├── Player.kt
-│       │   ├── Coin.kt
-│       │   └── WalkerEnemy.kt
-│       ├── input/
-│       ├── physics/
-│       ├── screens/
-│       ├── ui/
-│       └── world/
-│           └── Level.kt
-├── android/
-│   ├── build.gradle.kts
-│   └── src/main/
-│       ├── AndroidManifest.xml
-│       └── res/drawable/ic_launcher_vector.xml
-├── build.gradle.kts
-├── settings.gradle.kts
+├── project.godot
+├── export_presets.cfg
+├── scenes/
+│   └── main.tscn
+├── scripts/
+│   ├── game.gd
+│   ├── player.gd
+│   └── enemy.gd
+├── .github/
+│   └── workflows/
+│       └── android-build.yml
 └── README.md
 ```
 
-## Build
+## Backup branch
 
-Requirements:
-
-- Android SDK API 34
-- JDK/Gradle environment compatible with the project
-- Internet access for dependency downloads
-
-Debug APK:
-
-```bash
-gradle android:assembleDebug
-```
-
-Install to a connected device:
-
-```bash
-gradle android:installDebug
-```
-
-The repository also includes a GitHub Actions Android build workflow.
-
-## Native LibGDX packaging
-
-The Android build contains the corrected LibGDX native extraction pipeline. Native libraries must remain inside ABI-specific directories:
+The previous LibGDX implementation is preserved at:
 
 ```text
-lib/armeabi-v7a/libgdx.so
-lib/arm64-v8a/libgdx.so
-lib/x86/libgdx.so
-lib/x86_64/libgdx.so
+backup/libgdx-before-godot4-port
 ```
 
-This avoids the previous `mergeDebugNativeLibs` failure where Gradle reported that `libgdx.so` was not an ABI.
+This branch is kept as a rollback/reference point while the Godot 4 version is stabilized.
 
-## Design direction
+## Development direction
 
-Maryou AI is intentionally lightweight and asset-efficient:
+The current priority is to make the Godot 4 Android build stable and installable, then continue improving gameplay, mobile UX, procedural generation, effects, audio, and release packaging.
 
-- Kotlin
-- LibGDX
-- Android
-- Vector-style procedural rendering
-- Endless procedural gameplay
-- Local run records
-- No external database required for the core game
-
-The foundation can be extended with more enemy behaviors, bosses, power-ups, audio, richer procedural structures, and additional game modes without replacing the current rendering and input architecture.
+A production Google Play build will use a dedicated release keystore and should be exported as an Android App Bundle (AAB). New Google Play apps are distributed as AABs, and Play uploads must use non-debug signing. citeturn0search0
