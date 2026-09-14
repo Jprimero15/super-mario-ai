@@ -162,8 +162,11 @@ func _add_hole_warning(parent: Node2D, hole: Rect2) -> void:
 	sprite.region_enabled = true
 	sprite.region_rect = Rect2(0.0, 128.0, 64.0, 64.0)
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	sprite.position = Vector2(hole.position.x + hole.size.x * 0.5, GROUND_Y - 18.0)
+	# Align the hole visual with the actual 32px ground tile instead of
+	# floating 18px above the land surface.
+	sprite.position = Vector2(hole.position.x + hole.size.x * 0.5, GROUND_Y + TILE * 0.5)
 	sprite.scale = Vector2(hole.size.x / 64.0, 0.72)
+	sprite.z_index = 1
 	parent.add_child(sprite)
 
 func _add_coin(parent: Node2D, position: Vector2) -> void:
