@@ -18,11 +18,7 @@ env:
 
 jobs:
   build:
-    # Build everything inside the requested Arch Linux image. The image is
-    # responsible for the base OS; the steps below install the Android/JVM
-    # tooling needed by this Gradle project so builds remain reproducible.
     runs-on: ubuntu-latest
-
     container:
       image: jprimero15/archlinux-docker:latest
 
@@ -70,17 +66,20 @@ jobs:
           export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
           gradle --no-daemon --stacktrace --warning-mode all android:assembleDebug
 
-      - name: Verify LibGDX native libraries are packaged
+      - name: Verify native libraries are packaged under ABI directories
         shell: bash
         run: |
           set -euxo pipefail
           APK="android/build/outputs/apk/debug/android-debug.apk"
           test -f "$APK"
-          unzip -l "$APK" | grep -E 'lib/(armeabi-v7a|arm64-v8a|x86|x86_64)/libgdx\.so$'
+          for ABI in armeabi-v7a arm64-v8a x86 x86_64; do
+            unzip -l "$APK" | grep -E "lib/${ABI}/libgdx\\.so$"
+            unzip -l "$APK" | grep -E "lib/${ABI}/libgdx-freetype\\.so$"
+          done
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: kotlin-mario-game-debug-apk
+          name: maryou-ai-debug-apk
           path: android/build/outputs/apk/debug/*.apk
           if-no-files-found: error
