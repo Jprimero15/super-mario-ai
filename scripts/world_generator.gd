@@ -14,6 +14,8 @@ const CollectibleScript := preload("res://scripts/collectible.gd")
 const HazardScript := preload("res://scripts/hazard.gd")
 const EnemyScript := preload("res://scripts/enemy.gd")
 const PipeTexture := preload("res://assets/sprites/pipe.svg")
+const ENVIRONMENT := preload("res://assets/world/environment.svg")
+const OBSTACLES := preload("res://assets/world/obstacles.svg")
 
 var generated_to := -1
 var active_chunks: Dictionary = {}
@@ -59,6 +61,18 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 			_add_solid(root, tile)
 			root.solids.append(tile)
 	root.holes = holes
+	for hole in holes:
+		_add_hole_warning(root, hole)
+
+	# New environment sheet: vary trees, bushes, rocks and signs between chunks.
+	if chunk_index > 0:
+		var decor_count := rng.randi_range(2, 4)
+		for i in range(decor_count):
+			var decor_x := start_x + float(rng.randi_range(2, 19)) * TILE
+			if rng.randf() < 0.58:
+				_add_environment(root, decor_x, 0)
+			else:
+				_add_environment(root, decor_x, 160)
 
 	var pipe_attempts := 1 + int(distance_steps / 500)
 	var pipes_placed := 0
@@ -119,6 +133,33 @@ func _add_solid(parent: Node2D, rect: Rect2) -> void:
 		pipe_sprite.scale = Vector2(rect.size.x / 32.0, rect.size.y / 96.0)
 		body.add_child(pipe_sprite)
 	parent.add_child(body)
+
+func _add_hole_warning(parent: Node2D, hole: Rect2) -> void:
+	var sprite := Sprite2D.new()
+	sprite.texture = OBSTACLES
+	sprite.region_enabled = true
+	sprite.region_rect = Rect2(200.0, 8.0, 58.0, 60.0)
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.position = Vector2(hole.position.x + hole.size.x * 0.5, GROUND_Y - 18.0)
+	sprite.scale = Vector2(hole.size.x / 58.0, 0.72)
+	parent.add_child(sprite)
+
+func _add_environment(parent: Node2D, x: float, source_y: float) -> void:
+	var sprite := Sprite2D.new()
+	sprite.texture = ENVIRONMENT
+	sprite.region_enabled = true
+	if source_y == 0.0:
+		if int(x / TILE) % 3 == 0:
+			sprite.region_rect = Rect2(0.0, 0.0, 88.0, 142.0)
+		else:
+			sprite.region_rect = Rect2(160.0, 0.0, 96.0, 126.0)
+		sprite.position = Vector2(x, GROUND_Y - 63.0)
+	else:
+		sprite.region_rect = Rect2(256.0, 0.0, 104.0, 126.0)
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.scale = Vector2(0.78, 0.78)
+	sprite.z_index = -1
+	parent.add_child(sprite)
 
 func _add_hazard(parent: Node2D, pipe: Rect2) -> void:
 	var area := HazardScript.new()
