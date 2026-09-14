@@ -17,6 +17,9 @@ var touch_jump_pressed: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
+	# Landscape-only, but allow both normal and reverse landscape orientations.
+	if OS.has_feature("android"):
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
 	ScoreManager.reset_run()
 	enemies = Node2D.new()
 	enemies.name = "Enemies"
