@@ -1,0 +1,72 @@
+[gd_resource type="SpriteFrames" load_steps=17 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/world/obstacles.svg" id="1"]
+
+[sub_resource type="AtlasTexture" id="A0"]
+atlas = ExtResource("1")
+region = Rect2(0, 0, 64, 64)
+[sub_resource type="AtlasTexture" id="A1"]
+atlas = ExtResource("1")
+region = Rect2(64, 0, 64, 64)
+[sub_resource type="AtlasTexture" id="A2"]
+atlas = ExtResource("1")
+region = Rect2(128, 0, 64, 64)
+[sub_resource type="AtlasTexture" id="A3"]
+atlas = ExtResource("1")
+region = Rect2(192, 0, 64, 64)
+[sub_resource type="AtlasTexture" id="A4"]
+atlas = ExtResource("1")
+region = Rect2(0, 64, 64, 64)
+[sub_resource type="AtlasTexture" id="A5"]
+atlas = ExtResource("1")
+region = Rect2(64, 64, 64, 64)
+[sub_resource type="AtlasTexture" id="A6"]
+atlas = ExtResource("1")
+region = Rect2(128, 64, 64, 64)
+[sub_resource type="AtlasTexture" id="A7"]
+atlas = ExtResource("1")
+region = Rect2(192, 64, 64, 64)
+[sub_resource type="AtlasTexture" id="A8"]
+atlas = ExtResource("1")
+region = Rect2(0, 128, 64, 64)
+[sub_resource type="AtlasTexture" id="A9"]
+atlas = ExtResource("1")
+region = Rect2(64, 128, 64, 64)
+[sub_resource type="AtlasTexture" id="A10"]
+atlas = ExtResource("1")
+region = Rect2(128, 128, 64, 64)
+[sub_resource type="AtlasTexture" id="A11"]
+atlas = ExtResource("1")
+region = Rect2(192, 128, 64, 64)
+[sub_resource type="AtlasTexture" id="A12"]
+atlas = ExtResource("1")
+region = Rect2(0, 192, 64, 64)
+[sub_resource type="AtlasTexture" id="A13"]
+atlas = ExtResource("1")
+region = Rect2(64, 192, 64, 64)
+[sub_resource type="AtlasTexture" id="A14"]
+atlas = ExtResource("1")
+region = Rect2(128, 192, 64, 64)
+[sub_resource type="AtlasTexture" id="A15"]
+atlas = ExtResource("1")
+region = Rect2(192, 192, 64, 64)
+
+[resource]
+animations = [
+{"frames":[{"duration":1.0,"texture":SubResource("A0")}],"loop":false,"name":&"platform","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A1")}],"loop":false,"name":&"spikes","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A2")}],"loop":false,"name":&"crumble","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A3")}],"loop":false,"name":&"small_crumble","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A4")}],"loop":false,"name":&"conveyor","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A5")}],"loop":false,"name":&"saw","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A6")}],"loop":false,"name":&"lava","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A7")}],"loop":false,"name":&"rock","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A8")}],"loop":false,"name":&"pit","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A9")}],"loop":false,"name":&"mace","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A10")}],"loop":false,"name":&"acid","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A11")}],"loop":false,"name":&"crate","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A12")}],"loop":false,"name":&"bounce","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A13")}],"loop":false,"name":&"bounce_active","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A14")}],"loop":false,"name":&"checkpoint","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("A15")}],"loop":false,"name":&"checkpoint_active","speed":1.0}
+]
