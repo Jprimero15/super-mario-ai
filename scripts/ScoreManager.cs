@@ -2,14 +2,14 @@ using Godot;
 
 public partial class ScoreManager : Node
 {
+    private const string RecordsPath = "user://records.cfg";
+
     public int Steps { get; private set; }
     public int Coins { get; private set; }
     public int Combo { get; private set; }
     public int Lives { get; private set; } = 3;
     public int BestScore { get; private set; }
     public bool RunActive { get; private set; }
-
-    private const string RecordsPath = "user://records.cfg";
 
     public override void _Ready()
     {
@@ -27,7 +27,8 @@ public partial class ScoreManager : Node
 
     public void UpdateSteps(int steps)
     {
-        Steps = Mathf.Max(Steps, steps);
+        if (steps > Steps)
+            Steps = steps;
     }
 
     public void AddCoin()
@@ -71,7 +72,9 @@ public partial class ScoreManager : Node
 
         RunActive = false;
         int score = Score();
-        BestScore = Mathf.Max(BestScore, score);
+        if (score > BestScore)
+            BestScore = score;
+
         SaveBest();
         PlaySound("game_over");
     }
@@ -86,9 +89,7 @@ public partial class ScoreManager : Node
     private void LoadBest()
     {
         ConfigFile config = new ConfigFile();
-        Error error = config.Load(RecordsPath);
-
-        if (error != Error.Ok)
+        if (config.Load(RecordsPath) != Error.Ok)
         {
             BestScore = 0;
             return;
