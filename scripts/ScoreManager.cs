@@ -25,6 +25,11 @@ public partial class ScoreManager : Node
         RunActive = true;
     }
 
+    public void UpdateSteps(int steps)
+    {
+        Steps = Mathf.Max(Steps, steps);
+    }
+
     public void AddCoin()
     {
         Coins++;
