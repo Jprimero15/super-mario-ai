@@ -15,17 +15,17 @@ func reset_run() -> void:
 
 func add_coin() -> void:
 	coins += 1
-	if has_node("/root/AudioManager"): AudioManager.play_sfx("coin")
+	AudioManager.play_sfx("coin")
 
 func add_stomp() -> void:
-	if has_node("/root/AudioManager"): AudioManager.play_sfx("stomp")
+	AudioManager.play_sfx("stomp")
 
 func finish_run() -> void:
 	if not run_active: return
 	run_active = false
 	best_steps = maxi(best_steps, steps)
 	save_best()
-	if has_node("/root/AudioManager"): AudioManager.play_sfx("game_over")
+	AudioManager.play_sfx("game_over")
 
 func load_best() -> void:
 	var cfg := ConfigFile.new()
