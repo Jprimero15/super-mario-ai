@@ -9,10 +9,8 @@ const CHUNK_WIDTH := 640.0
 const TILE := 32.0
 const GROUND_Y := 560.0
 const ChunkScript := preload("res://scripts/chunk.gd")
-const HazardScript := preload("res://scripts/hazard.gd")
 const EnemyScript := preload("res://scripts/enemy.gd")
 const CoinFrames := preload("res://assets/sprites/coin_frames.tres")
-const PipeTexture := preload("res://assets/sprites/pipe.svg")
 
 const OBSTACLE_SCENES := [
 	preload("res://scenes/obstacles/platform.tscn"),
@@ -103,26 +101,6 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 					occupied.append(obstacle_rect)
 					break
 
-	var pipe_attempts := 1 + int(distance_steps / 500)
-	var pipes_placed := 0
-	for i in range(pipe_attempts):
-		if rng.randf() > MaryouDifficultyCurve.pipe_chance(distance_steps): continue
-		var pipe := Rect2(start_x + float(rng.randi_range(9, 18)) * TILE, GROUND_Y - float(rng.randi_range(2, 3)) * TILE, TILE, float(rng.randi_range(2, 3)) * TILE)
-		if pipe.position.x < safe_gap_until: continue
-		if _safe(pipe, occupied, holes, 42.0):
-			occupied.append(pipe)
-			root.pipes.append(pipe)
-			_add_solid(root, pipe)
-			_add_hazard(root, pipe)
-			pipes_placed += 1
-	if chunk_index > 0 and pipes_placed == 0 and rng.randf() < 0.78:
-		var fallback := Rect2(start_x + float(rng.randi_range(13, 17)) * TILE, GROUND_Y - 64.0, TILE, 64.0)
-		if _safe(fallback, occupied, holes, 42.0):
-			occupied.append(fallback)
-			root.pipes.append(fallback)
-			_add_solid(root, fallback)
-			_add_hazard(root, fallback)
-
 	var coin_count := rng.randi_range(2, 4)
 	for i in range(coin_count):
 		var coin_pos := Vector2(start_x + float(rng.randi_range(7, 18)) * TILE, GROUND_Y - float(rng.randi_range(92, 190)))
@@ -176,12 +154,6 @@ func _add_solid(parent: Node2D, rect: Rect2) -> void:
 	var collider := CollisionShape2D.new()
 	collider.shape = shape
 	body.add_child(collider)
-	if rect.position.y < GROUND_Y and rect.size.y > TILE:
-		var pipe_sprite := Sprite2D.new()
-		pipe_sprite.texture = PipeTexture
-		pipe_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pipe_sprite.scale = Vector2(rect.size.x / 32.0, rect.size.y / 96.0)
-		body.add_child(pipe_sprite)
 	parent.add_child(body)
 
 func _add_hole_warning(parent: Node2D, hole: Rect2) -> void:
@@ -193,14 +165,6 @@ func _add_hole_warning(parent: Node2D, hole: Rect2) -> void:
 	sprite.position = Vector2(hole.position.x + hole.size.x * 0.5, GROUND_Y - 18.0)
 	sprite.scale = Vector2(hole.size.x / 64.0, 0.72)
 	parent.add_child(sprite)
-
-func _add_hazard(parent: Node2D, pipe: Rect2) -> void:
-	var area := HazardScript.new()
-	var hazard_height := maxf(10.0, pipe.size.y - 20.0)
-	area.position = pipe.position + Vector2(pipe.size.x * 0.5, pipe.size.y * 0.5 + 10.0)
-	area.setup(Vector2(pipe.size.x + 8.0, hazard_height))
-	area.hit_player.connect(func(_hit_player: MaryouPlayer): hazard_hit.emit(_hit_player))
-	parent.add_child(area)
 
 func _add_coin(parent: Node2D, position: Vector2) -> void:
 	var coin := Area2D.new()
