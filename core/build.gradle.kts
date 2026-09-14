@@ -6,9 +6,9 @@ val gdxVersion = "1.12.1"
 
 dependencies {
     api("com.badlogicgames.gdx:gdx:$gdxVersion")
+    api("com.badlogicgames.gdx:gdx-freetype:$gdxVersion")
 }
 
-// Keep Java and Kotlin bytecode targets aligned for Gradle 8+ / JDK 17 CI.
 tasks.withType<JavaCompile>().configureEach {
     sourceCompatibility = JavaVersion.VERSION_11.toString()
     targetCompatibility = JavaVersion.VERSION_11.toString()
