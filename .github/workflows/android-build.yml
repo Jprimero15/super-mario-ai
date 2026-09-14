@@ -12,6 +12,7 @@ permissions:
 
 env:
   GODOT_VERSION: "4.7.2"
+  DOTNET_VERSION: "9.0.318"
   ANDROID_API: "35"
   ANDROID_BUILD_TOOLS: "35.0.1"
   ANDROID_NDK: "28.1.13356709"
@@ -26,7 +27,15 @@ jobs:
       - name: Setup .NET 9
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '${{ env.DOTNET_VERSION }}'
+
+      - name: Verify .NET SDK
+        shell: bash
+        run: |
+          set -euxo pipefail
+          dotnet --version
+          dotnet --list-sdks
+          test "$(dotnet --version)" = "${DOTNET_VERSION}"
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -100,18 +109,26 @@ jobs:
           cp -R /tmp/godot-templates/templates/. "$TEMPLATE_DIR/"
           test -f "$TEMPLATE_DIR/android_source.zip"
 
+      - name: Clean generated Godot C# cache
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .godot/mono
+          mkdir -p .godot/mono
+
       - name: Generate Godot C# solution
         shell: bash
         run: |
           set -euxo pipefail
-          godot --headless --path . --editor --quit --build-solutions
+          godot --headless --path . --editor --quit
           test -f super-mario-ai.sln
+          test -f super-mario-ai.csproj
 
       - name: Restore C# dependencies
         run: dotnet restore super-mario-ai.sln
 
       - name: Build C# solution
-        run: dotnet build super-mario-ai.sln --configuration Debug --no-restore
+        run: dotnet build super-mario-ai.sln --configuration Debug --no-restore --no-incremental
 
       - name: Verify C# assembly
         shell: bash
@@ -119,6 +136,8 @@ jobs:
           set -euxo pipefail
           test -s .godot/mono/temp/bin/Debug/super-mario-ai.dll
           dotnet --info
+          echo "Built assembly:"
+          ls -lah .godot/mono/temp/bin/Debug/
 
       - name: Register rebuilt C# assembly with Godot
         shell: bash
@@ -130,7 +149,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          godot --headless --path . --editor --quit
+          godot --headless --path . --editor --quit --verbose
 
       - name: Run Godot C# smoke test
         shell: bash
