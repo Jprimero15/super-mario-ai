@@ -1,91 +1,79 @@
-[gd_resource type="SpriteFrames" load_steps=19 format=3]
+[gd_resource type="SpriteFrames" load_steps=18 format=3]
 
-[ext_resource type="Texture2D" path="res://assets/sprites/maryou.svg" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/maryou_jungle_boy.png" id="1"]
 
-[sub_resource type="AtlasTexture" id="Maryou_0"]
+[sub_resource type="AtlasTexture" id="F0"]
 atlas = ExtResource("1")
-region = Rect2(0, 0, 64, 64)
+region = Rect2(0, 0, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_1"]
+[sub_resource type="AtlasTexture" id="F1"]
 atlas = ExtResource("1")
-region = Rect2(64, 0, 64, 64)
+region = Rect2(256, 0, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_2"]
+[sub_resource type="AtlasTexture" id="F2"]
 atlas = ExtResource("1")
-region = Rect2(128, 0, 64, 64)
+region = Rect2(512, 0, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_3"]
+[sub_resource type="AtlasTexture" id="F3"]
 atlas = ExtResource("1")
-region = Rect2(192, 0, 64, 64)
+region = Rect2(768, 0, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_4"]
+[sub_resource type="AtlasTexture" id="F4"]
 atlas = ExtResource("1")
-region = Rect2(0, 64, 64, 64)
+region = Rect2(0, 256, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_5"]
+[sub_resource type="AtlasTexture" id="F5"]
 atlas = ExtResource("1")
-region = Rect2(64, 64, 64, 64)
+region = Rect2(256, 256, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_6"]
+[sub_resource type="AtlasTexture" id="F6"]
 atlas = ExtResource("1")
-region = Rect2(128, 64, 64, 64)
+region = Rect2(512, 256, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_7"]
+[sub_resource type="AtlasTexture" id="F7"]
 atlas = ExtResource("1")
-region = Rect2(192, 64, 64, 64)
+region = Rect2(768, 256, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_8"]
+[sub_resource type="AtlasTexture" id="F8"]
 atlas = ExtResource("1")
-region = Rect2(0, 128, 64, 64)
+region = Rect2(0, 512, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_9"]
+[sub_resource type="AtlasTexture" id="F9"]
 atlas = ExtResource("1")
-region = Rect2(64, 128, 64, 64)
+region = Rect2(256, 512, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_10"]
+[sub_resource type="AtlasTexture" id="F10"]
 atlas = ExtResource("1")
-region = Rect2(128, 128, 64, 64)
+region = Rect2(512, 512, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_11"]
+[sub_resource type="AtlasTexture" id="F11"]
 atlas = ExtResource("1")
-region = Rect2(192, 128, 64, 64)
+region = Rect2(768, 512, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_12"]
+[sub_resource type="AtlasTexture" id="F12"]
 atlas = ExtResource("1")
-region = Rect2(0, 192, 64, 64)
+region = Rect2(0, 768, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_13"]
+[sub_resource type="AtlasTexture" id="F13"]
 atlas = ExtResource("1")
-region = Rect2(64, 192, 64, 64)
+region = Rect2(256, 768, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_14"]
+[sub_resource type="AtlasTexture" id="F14"]
 atlas = ExtResource("1")
-region = Rect2(128, 192, 64, 64)
+region = Rect2(512, 768, 256, 256)
 filter_clip = true
-[sub_resource type="AtlasTexture" id="Maryou_15"]
+[sub_resource type="AtlasTexture" id="F15"]
 atlas = ExtResource("1")
-region = Rect2(192, 192, 64, 64)
+region = Rect2(768, 768, 256, 256)
 filter_clip = true
 
 [resource]
 animations = [
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_0")}, {"duration": 1.0, "texture": SubResource("Maryou_1")}], "loop": true, "name": &"idle", "speed": 2.5},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_1")}], "loop": false, "name": &"idle_alt", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_2")}], "loop": false, "name": &"run_1", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_3")}], "loop": false, "name": &"run_2", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_4")}], "loop": false, "name": &"run_3", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_5")}], "loop": false, "name": &"run_4" , "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_6")}], "loop": false, "name": &"jump", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_7")}], "loop": false, "name": &"fall", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_8")}], "loop": false, "name": &"crouch", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_9")}], "loop": false, "name": &"hurt", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_10")}], "loop": false, "name": &"action", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_11")}], "loop": false, "name": &"celebrate", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_12")}, {"duration": 1.0, "texture": SubResource("Maryou_13")}], "loop": true, "name": &"climb", "speed": 6.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_12")}], "loop": false, "name": &"climb_1", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_13")}], "loop": false, "name": &"climb_2", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_14")}], "loop": true, "name": &"swim", "speed": 6.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_15")}], "loop": false, "name": &"victory", "speed": 1.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_9")}], "loop": false, "name": &"dead", "speed": 6.0},
-{"frames": [{"duration": 1.0, "texture": SubResource("Maryou_2")}, {"duration": 1.0, "texture": SubResource("Maryou_3")}, {"duration": 1.0, "texture": SubResource("Maryou_4")}, {"duration": 1.0, "texture": SubResource("Maryou_5")}], "loop": true, "name": &"run", "speed": 10.0}
+{"frames":[{"duration":1.0,"texture":SubResource("F0")},{"duration":1.0,"texture":SubResource("F1")},{"duration":1.0,"texture":SubResource("F2")},{"duration":1.0,"texture":SubResource("F3")}],"loop":true,"name":&"idle","speed":4.0},
+{"frames":[{"duration":1.0,"texture":SubResource("F4")},{"duration":1.0,"texture":SubResource("F5")},{"duration":1.0,"texture":SubResource("F6")},{"duration":1.0,"texture":SubResource("F7")}],"loop":true,"name":&"run","speed":10.0},
+{"frames":[{"duration":1.0,"texture":SubResource("F8")},{"duration":1.0,"texture":SubResource("F9")},{"duration":1.0,"texture":SubResource("F10")},{"duration":1.0,"texture":SubResource("F11")}],"loop":false,"name":&"jump","speed":8.0},
+{"frames":[{"duration":1.0,"texture":SubResource("F12")},{"duration":1.0,"texture":SubResource("F13")},{"duration":1.0,"texture":SubResource("F14")},{"duration":1.0,"texture":SubResource("F15")}],"loop":false,"name":&"land","speed":10.0},
+{"frames":[{"duration":1.0,"texture":SubResource("F9")}],"loop":false,"name":&"hurt","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("F15")}],"loop":false,"name":&"dead","speed":1.0},
+{"frames":[{"duration":1.0,"texture":SubResource("F10")}],"loop":false,"name":&"fall","speed":1.0}
 ]
