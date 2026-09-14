@@ -13,6 +13,7 @@ const ChunkScript := preload("res://scripts/chunk.gd")
 const CollectibleScript := preload("res://scripts/collectible.gd")
 const HazardScript := preload("res://scripts/hazard.gd")
 const EnemyScript := preload("res://scripts/enemy.gd")
+const PipeTexture := preload("res://assets/sprites/pipe.svg")
 
 var generated_to := -1
 var active_chunks: Dictionary = {}
@@ -41,7 +42,6 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 	var holes: Array[Rect2] = []
 	var hole_chance := MaryouDifficultyCurve.hole_chance(distance_steps)
 	var safe_gap_until := start_x + 300.0
-
 	for i in range(20):
 		var x := start_x + float(i) * TILE
 		if x < safe_gap_until: continue
@@ -50,7 +50,6 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 			var hole := Rect2(x, GROUND_Y, width, TILE)
 			holes.append(hole)
 			safe_gap_until = hole.end.x + 96.0
-
 	for i in range(20):
 		var tile := Rect2(start_x + float(i) * TILE, GROUND_Y, TILE, TILE)
 		var blocked := false
@@ -61,7 +60,6 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 			root.solids.append(tile)
 	root.holes = holes
 
-	# Pipes are a core obstacle again. Later chunks get a strong chance of at least one.
 	var pipe_attempts := 1 + int(distance_steps / 500)
 	var pipes_placed := 0
 	for i in range(pipe_attempts):
@@ -82,17 +80,13 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 			_add_solid(root, fallback)
 			_add_hazard(root, fallback)
 
-	# Sparse collectibles: only a few coins per chunk, placed intentionally.
 	var coin_count := rng.randi_range(2, 4)
 	for i in range(coin_count):
 		var coin_pos := Vector2(start_x + float(rng.randi_range(7, 18)) * TILE, GROUND_Y - float(rng.randi_range(92, 190)))
-		if _safe(Rect2(coin_pos - Vector2(15, 15), Vector2(30, 30)), occupied, holes, 10.0):
-			_add_collectible(root, coin_pos, "coin")
-
+		if _safe(Rect2(coin_pos - Vector2(15, 15), Vector2(30, 30)), occupied, holes, 10.0): _add_collectible(root, coin_pos, "coin")
 	if distance_steps >= 650 and rng.randf() < 0.22:
 		var power_pos := Vector2(start_x + float(rng.randi_range(14, 19)) * TILE, GROUND_Y - 120.0)
-		if _safe(Rect2(power_pos - Vector2(15, 15), Vector2(30, 30)), occupied, holes, 10.0):
-			_add_collectible(root, power_pos, "shield")
+		if _safe(Rect2(power_pos - Vector2(15, 15), Vector2(30, 30)), occupied, holes, 10.0): _add_collectible(root, power_pos, "shield")
 
 	var count := MaryouDifficultyCurve.enemy_count(distance_steps)
 	if chunk_index == 0: count = 0
@@ -118,6 +112,12 @@ func _add_solid(parent: Node2D, rect: Rect2) -> void:
 	var collider := CollisionShape2D.new()
 	collider.shape = shape
 	body.add_child(collider)
+	if rect.position.y < GROUND_Y and rect.size.y > TILE:
+		var pipe_sprite := Sprite2D.new()
+		pipe_sprite.texture = PipeTexture
+		pipe_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		pipe_sprite.scale = Vector2(rect.size.x / 32.0, rect.size.y / 96.0)
+		body.add_child(pipe_sprite)
 	parent.add_child(body)
 
 func _add_hazard(parent: Node2D, pipe: Rect2) -> void:
