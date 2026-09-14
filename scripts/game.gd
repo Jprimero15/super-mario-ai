@@ -36,7 +36,9 @@ func _ready() -> void:
 	world.hazard_hit.connect(_on_hazard)
 	player = PlayerScene.new()
 	player.name = "Player"
-	player.position = Vector2(180, GROUND_Y - 35.0)
+	# Match the 50px gameplay body to the sprite's visible feet instead of
+	# leaving the character noticeably floating above the generated ground.
+	player.position = Vector2(180, GROUND_Y - 30.0)
 	add_child(player)
 	hud = HUDScene.new()
 	hud.name = "HUD"
