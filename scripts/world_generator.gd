@@ -152,12 +152,7 @@ func _choose_obstacle_index(rng: RandomNumberGenerator, distance_steps: int, chu
 		pool.append_array([6, 8, 9])
 	if tier >= 3:
 		pool.append(10)
-	var previous := -1
-	if slot > 0:
-		previous = 13
 	var index := pool[rng.randi_range(0, pool.size() - 1)]
-	if pool.size() > 1 and index == previous:
-		index = pool[rng.randi_range(0, pool.size() - 1)]
 	return index
 
 func _add_obstacle(parent: Node2D, scene: PackedScene, position: Vector2, index: int) -> void:
@@ -168,6 +163,8 @@ func _add_obstacle(parent: Node2D, scene: PackedScene, position: Vector2, index:
 	if obstacle is MaryouCheckpoint:
 		var checkpoint := obstacle as MaryouCheckpoint
 		checkpoint.checkpoint_reached.connect(func(checkpoint_position: Vector2): checkpoint_reached.emit(checkpoint_position))
+	elif obstacle.has_signal("hit_player"):
+		obstacle.hit_player.connect(func(hit_player: MaryouPlayer): hazard_hit.emit(hit_player))
 
 func _add_solid(parent: Node2D, rect: Rect2) -> void:
 	var body := StaticBody2D.new()
