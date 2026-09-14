@@ -21,12 +21,3 @@ func _draw() -> void:
 		draw_rect(lip, Color("#416b3d"))
 		for x in range(int(hole.position.x) + 5, int(hole.end.x), 12):
 			draw_line(Vector2(x, hole.position.y + 4.0), Vector2(x + 5.0, hole.position.y + 9.0), Color("#8ab85d"), 2.0)
-
-func _box(color: Color, radius: int) -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.bg_color = color
-	box.corner_radius_top_left = radius
-	box.corner_radius_top_right = radius
-	box.corner_radius_bottom_left = radius
-	box.corner_radius_bottom_right = radius
-	return box
