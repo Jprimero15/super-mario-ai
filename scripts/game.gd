@@ -7,14 +7,16 @@ const BACKGROUNDS := preload("res://assets/world/backgrounds.svg")
 const TILES := preload("res://assets/world/tiles.svg")
 const WORLD_HEIGHT: float = 720.0
 const GROUND_Y: float = 560.0
-const BACKDROP_WIDTH: float = 720.0
-const BACKGROUND_TILE_SIZE: float = 256.0
+const BACKDROP_WIDTH: float = 2048.0
 const GROUND_TILE_SIZE: float = 32.0
+const BACKGROUND_PARALLAX: float = 0.18
+const PANORAMA_PATH := "res://assets/world/background_panorama.png"
 
 var player: MaryouPlayer
 var world: MaryouWorldGenerator
 var enemies: Node2D
 var hud: MaryouHUD
+var background_panorama: Texture2D
 var steps: int = 0
 var hit_lock: bool = false
 var run_finishing: bool = false
@@ -28,6 +30,9 @@ func _ready() -> void:
 	lifecycle_token += 1
 	if OS.has_feature("android"):
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
+
+	if ResourceLoader.exists(PANORAMA_PATH):
+		background_panorama = load(PANORAMA_PATH) as Texture2D
 
 	var checkpoint_spawn := GameState.consume_checkpoint_respawn()
 	var spawning_at_checkpoint := checkpoint_spawn != Vector2.INF
@@ -204,15 +209,19 @@ func _juice(duration: float, time_scale: float, token: int) -> void:
 
 func _draw() -> void:
 	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
-	var season: int = posmod(steps / 500, 4)
-	var source_x: float = float(season) * BACKGROUND_TILE_SIZE
-	var first_x: float = floorf((cam_x - 1600.0) / BACKDROP_WIDTH) * BACKDROP_WIDTH
-	var source_rect := Rect2(source_x, 0.0, BACKGROUND_TILE_SIZE, BACKGROUND_TILE_SIZE)
-	# Keep the source tile orientation stable. Alternating draw transforms caused
-	# visible seams/glitches while the camera moved and during scene reloads.
-	for i in range(6):
-		var x: float = first_x + float(i) * BACKDROP_WIDTH
-		draw_texture_rect_region(BACKGROUNDS, Rect2(x, -40.0, BACKDROP_WIDTH, 720.0), source_rect)
+	if background_panorama != null:
+		var parallax_offset := cam_x * BACKGROUND_PARALLAX
+		var first_x := floorf((parallax_offset - BACKDROP_WIDTH) / BACKDROP_WIDTH) * BACKDROP_WIDTH
+		for i in range(4):
+			var x := first_x + float(i) * BACKDROP_WIDTH - parallax_offset
+			draw_texture_rect(background_panorama, Rect2(x, -40.0, BACKDROP_WIDTH, WORLD_HEIGHT), false)
+	else:
+		# Fallback for builds where the new panorama has not been imported yet.
+		var first_x: float = floorf((cam_x - 1600.0) / 720.0) * 720.0
+		var source_rect := Rect2(0.0, 0.0, 256.0, 256.0)
+		for i in range(6):
+			var x: float = first_x + float(i) * 720.0
+			draw_texture_rect_region(BACKGROUNDS, Rect2(x, -40.0, 720.0, 720.0), source_rect)
 
 	var first_visible_x: float = cam_x - 1700.0
 	var last_visible_x: float = cam_x + 1900.0
