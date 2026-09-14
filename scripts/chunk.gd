@@ -23,9 +23,9 @@ func _draw() -> void:
 		draw_rect(Rect2(hole.position + Vector2(3.0, 12.0), Vector2(maxf(0.0, hole.size.x - 6.0), 70.0)), Color("#111719"))
 		draw_rect(Rect2(hole.position + Vector2(7.0, 30.0), Vector2(maxf(0.0, hole.size.x - 14.0), 38.0)), Color("#080d10"))
 		draw_rect(lip, Color("#416b3d"))
-	# Small rim highlights make the opening readable on mobile screens.
-	for x in range(int(hole.position.x) + 5, int(hole.end.x), 12):
-		draw_line(Vector2(x, hole.position.y + 4.0), Vector2(x + 5.0, hole.position.y + 9.0), Color("#8ab85d"), 2.0)
+		# Small rim highlights make the opening readable on mobile screens.
+		for x in range(int(hole.position.x) + 5, int(hole.end.x), 12):
+			draw_line(Vector2(x, hole.position.y + 4.0), Vector2(x + 5.0, hole.position.y + 9.0), Color("#8ab85d"), 2.0)
 
 	# Classic green pipe obstacles: tall, solid and visually readable.
 	for pipe in pipes:
