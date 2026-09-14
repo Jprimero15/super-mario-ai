@@ -64,8 +64,16 @@ jobs:
         run: |
           set -euxo pipefail
           curl -fsSL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip" -o /tmp/godot.zip
+          rm -rf /tmp/godot
+          mkdir -p /tmp/godot
           unzip -q /tmp/godot.zip -d /tmp/godot
-          sudo install -m 0755 "/tmp/godot/Godot_v${GODOT_VERSION}-stable_mono_linux.x86_64" /usr/local/bin/godot
+          GODOT_BIN="$(find /tmp/godot -maxdepth 2 -type f -name 'Godot_v*-stable_mono_linux.x86_64' -print -quit)"
+          if [ -z "$GODOT_BIN" ]; then
+            echo "ERROR: Godot .NET executable not found in archive"
+            find /tmp/godot -maxdepth 3 -type f -print
+            exit 1
+          fi
+          sudo install -m 0755 "$GODOT_BIN" /usr/local/bin/godot
           godot --version
 
       - name: Install matching .NET export templates
