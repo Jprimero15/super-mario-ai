@@ -3,20 +3,17 @@ class_name MaryouWorldGenerator
 
 signal coin_collected
 signal hazard_hit
+signal checkpoint_reached(position: Vector2)
 
 const CHUNK_WIDTH := 640.0
 const TILE := 32.0
 const GROUND_Y := 560.0
-const SEED := 20260914
 const ChunkScript := preload("res://scripts/chunk.gd")
 const HazardScript := preload("res://scripts/hazard.gd")
 const EnemyScript := preload("res://scripts/enemy.gd")
 const CoinFrames := preload("res://assets/sprites/coin_frames.tres")
 const PipeTexture := preload("res://assets/sprites/pipe.svg")
 
-# Reusable obstacle scenes. The generator places the real interactive scenes,
-# rather than drawing decorative atlas regions, so collision and behavior stay
-# in one source of truth.
 const OBSTACLE_SCENES := [
 	preload("res://scenes/obstacles/platform.tscn"),
 	preload("res://scenes/obstacles/spikes.tscn"),
@@ -37,9 +34,11 @@ const OBSTACLE_SCENES := [
 var generated_to := -1
 var active_chunks: Dictionary = {}
 var enemy_root: Node2D
+var run_seed: int = 0
 
 func setup(enemies: Node2D) -> void:
 	enemy_root = enemies
+	run_seed = int(Time.get_ticks_usec()) + int(Time.get_unix_time_from_system() * 1000.0)
 
 func generate_until(player_x: float, distance_steps: int) -> void:
 	var target := int(floor(player_x / CHUNK_WIDTH)) + 3
@@ -54,13 +53,15 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 	root.name = "Chunk_%d" % chunk_index
 	add_child(root)
 	active_chunks[chunk_index] = root
+
 	var rng := RandomNumberGenerator.new()
-	rng.seed = SEED + chunk_index * 7919
+	rng.seed = run_seed + chunk_index * 7919
 	var start_x := float(chunk_index) * CHUNK_WIDTH
 	var occupied: Array[Rect2] = []
 	var holes: Array[Rect2] = []
 	var hole_chance := MaryouDifficultyCurve.hole_chance(distance_steps)
 	var safe_gap_until := start_x + 300.0
+
 	for i in range(20):
 		var x := start_x + float(i) * TILE
 		if x < safe_gap_until: continue
@@ -69,11 +70,14 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 			var hole := Rect2(x, GROUND_Y, width, TILE)
 			holes.append(hole)
 			safe_gap_until = hole.end.x + 96.0
+
 	for i in range(20):
 		var tile := Rect2(start_x + float(i) * TILE, GROUND_Y, TILE, TILE)
 		var blocked := false
 		for hole in holes:
-			if tile.intersects(hole): blocked = true; break
+			if tile.intersects(hole):
+				blocked = true
+				break
 		if not blocked:
 			_add_solid(root, tile)
 			root.solids.append(tile)
@@ -81,16 +85,12 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 	for hole in holes:
 		_add_hole_warning(root, hole)
 
-	# Spawn the actual obstacle scenes into the generated level. Each chunk gets
-	# at least one scene from the full 14-type rotation, with extra hazards as
-	# difficulty rises. This guarantees every obstacle type appears in normal
-	# endless gameplay while preserving safe spacing around pipes/holes/enemies.
 	if chunk_index > 0:
 		var obstacle_count := 1
 		if distance_steps >= 350: obstacle_count = 2
 		if distance_steps >= 1000: obstacle_count = 3
 		for obstacle_slot in range(obstacle_count):
-			var obstacle_index := posmod(chunk_index - 1 + obstacle_slot * 5, OBSTACLE_SCENES.size())
+			var obstacle_index := _choose_obstacle_index(rng, distance_steps, chunk_index, obstacle_slot)
 			var obstacle_scene: PackedScene = OBSTACLE_SCENES[obstacle_index]
 			for attempt in range(10):
 				var obstacle_x := start_x + float(rng.randi_range(8, 18)) * TILE
@@ -123,9 +123,6 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 			_add_solid(root, fallback)
 			_add_hazard(root, fallback)
 
-	# Coins are the only remaining pickup. They use coin.svg through the
-	# dedicated four-frame SpriteFrames resource; the old collectibles sheet
-	# and shield pickup are intentionally no longer part of level generation.
 	var coin_count := rng.randi_range(2, 4)
 	for i in range(coin_count):
 		var coin_pos := Vector2(start_x + float(rng.randi_range(7, 18)) * TILE, GROUND_Y - float(rng.randi_range(92, 190)))
@@ -141,18 +138,36 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 			if _safe(enemy_rect, occupied, holes, 48.0):
 				var enemy := EnemyScript.new()
 				enemy.position = Vector2(enemy_x, GROUND_Y - 40.0)
-				enemy.setup(MaryouDifficultyCurve.enemy_kind(distance_steps, i))
+				enemy.setup(MaryouDifficultyCurve.enemy_kind(distance_steps, i, rng))
 				enemy_root.add_child(enemy)
 				occupied.append(enemy_rect)
 				break
+
+func _choose_obstacle_index(rng: RandomNumberGenerator, distance_steps: int, chunk_index: int, slot: int) -> int:
+	if chunk_index % 6 == 0 and slot == 0:
+		return 13
+	var tier := MaryouDifficultyCurve.tier_for_steps(distance_steps)
+	var pool: Array[int] = [0, 1, 2, 3, 4, 5, 7, 11, 12]
+	if tier >= 2:
+		pool.append_array([6, 8, 9])
+	if tier >= 3:
+		pool.append(10)
+	var previous := -1
+	if slot > 0:
+		previous = 13
+	var index := pool[rng.randi_range(0, pool.size() - 1)]
+	if pool.size() > 1 and index == previous:
+		index = pool[rng.randi_range(0, pool.size() - 1)]
+	return index
 
 func _add_obstacle(parent: Node2D, scene: PackedScene, position: Vector2, index: int) -> void:
 	var obstacle := scene.instantiate()
 	obstacle.name = "Obstacle_%02d_%s" % [index, scene.resource_path.get_file().get_basename()]
 	obstacle.position = position
 	parent.add_child(obstacle)
-	if index == 13 and obstacle.has_method("set_checkpoint_position"):
-		obstacle.set_checkpoint_position(position)
+	if obstacle is MaryouCheckpoint:
+		var checkpoint := obstacle as MaryouCheckpoint
+		checkpoint.checkpoint_reached.connect(func(checkpoint_position: Vector2): checkpoint_reached.emit(checkpoint_position))
 
 func _add_solid(parent: Node2D, rect: Rect2) -> void:
 	var body := StaticBody2D.new()
