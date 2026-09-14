@@ -4,7 +4,6 @@ extends Area2D
 var cooldown := 0.0
 
 func _ready() -> void:
-	add_to_group("hazards")
 	collision_layer = 0
 	collision_mask = 1
 	body_entered.connect(_on_body_entered)
