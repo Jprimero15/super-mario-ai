@@ -32,10 +32,6 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          # setup-android@v3 defaults to installing the obsolete SDK "tools"
-          # package. Modern command-line tools no longer publish that package.
-          # Install only the command-line tooling here; required SDK packages
-          # are installed explicitly in the next step.
           packages: ''
 
       - name: Install Android packages
@@ -88,7 +84,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          godot --headless --path . --script tests/smoke_test_v2.gd
+          godot --headless --path . --script tests/smoke_test.gd
 
       - name: Export signed Android debug APK
         shell: bash
