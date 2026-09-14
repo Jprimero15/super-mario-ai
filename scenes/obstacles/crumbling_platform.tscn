@@ -1,0 +1,27 @@
+[gd_scene load_steps=5 format=3]
+[ext_resource type="Script" path="res://scripts/crumbling_platform.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/world/obstacles.svg" id="2"]
+[sub_resource type="RectangleShape2D" id="1"]
+size = Vector2(52, 34)
+[sub_resource type="RectangleShape2D" id="2"]
+size = Vector2(56, 44)
+[node name="CrumblingPlatform" type="AnimatableBody2D" groups=["hazards"]]
+script = ExtResource("1")
+collision_layer = 2
+collision_mask = 1
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2")
+region_enabled = true
+region_rect = Rect2(128, 0, 64, 64)
+texture_filter = 1
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 10)
+shape = SubResource("1")
+[node name="Trigger" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 1
+monitoring = true
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trigger"]
+position = Vector2(0, 4)
+shape = SubResource("2")
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
