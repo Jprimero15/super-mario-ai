@@ -13,8 +13,7 @@ public static class MaryouDifficultyCurve
         return 4;
     }
 
-    public static float Progress(int distanceSteps) => Mathf.Clamp(distanceSteps, 0, int.MaxValue) / MaxDistance is float p ? Mathf.Clamp(p, 0.0f, 1.0f) : 0.0f;
-
+    public static float Progress(int distanceSteps) => Mathf.Clamp((float)Mathf.Max(distanceSteps, 0) / MaxDistance, 0.0f, 1.0f);
     public static float SpeedForSteps(int distanceSteps) => Mathf.Lerp(300.0f, MaxSpeed, Mathf.Pow(Progress(distanceSteps), 0.78f));
     public static float HoleChance(int distanceSteps) => Mathf.Lerp(0.045f, 0.14f, Progress(distanceSteps));
     public static float PipeChance(int distanceSteps) => Mathf.Lerp(0.10f, 0.34f, Progress(distanceSteps));
