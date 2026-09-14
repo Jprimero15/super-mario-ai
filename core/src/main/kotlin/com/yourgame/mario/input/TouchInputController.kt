@@ -16,7 +16,10 @@ class TouchInputController(private val viewport: Viewport) : InputController {
 
     private val leftHit = Rectangle(0f, 0f, 78f, 86f)
     private val rightHit = Rectangle(88f, 0f, 78f, 86f)
+    private val leftHandedLeftHit = Rectangle(654f, 0f, 78f, 86f)
+    private val leftHandedRightHit = Rectangle(742f, 0f, 58f, 86f)
     private val jumpHit = Rectangle(690f, 0f, 110f, 88f)
+    private val leftHandedJumpHit = Rectangle(0f, 0f, 110f, 88f)
     private val pauseHit = Rectangle(730f, 405f, 70f, 75f)
     private val restartHit = Rectangle(250f, 130f, 160f, 90f)
     private val menuHit = Rectangle(390f, 130f, 160f, 90f)
@@ -56,16 +59,16 @@ class TouchInputController(private val viewport: Viewport) : InputController {
         applyHandedness(false)
         leftDown = false; rightDown = false; jumpDown = false
         pauseDown = false; restartDown = false; menuDown = false
+        val activeLeft = if (appliedLeftHanded) leftHandedLeftHit else leftHit
+        val activeRight = if (appliedLeftHanded) leftHandedRightHit else rightHit
+        val activeJump = if (appliedLeftHanded) leftHandedJumpHit else jumpHit
         for (pointer in 0 until 20) {
             if (!Gdx.input.isTouched(pointer)) continue
             touchPoint.set(Gdx.input.getX(pointer).toFloat(), Gdx.input.getY(pointer).toFloat())
             viewport.unproject(touchPoint)
-            val leftZone = if (appliedLeftHanded) Rectangle(654f, 0f, 78f, 86f) else leftHit
-            val rightZone = if (appliedLeftHanded) Rectangle(742f, 0f, 58f, 86f) else rightHit
-            if (leftZone.contains(touchPoint)) leftDown = true
-            if (rightZone.contains(touchPoint)) rightDown = true
-            val jumpZone = if (appliedLeftHanded) Rectangle(0f, 0f, 110f, 88f) else jumpHit
-            if (jumpZone.contains(touchPoint)) jumpDown = true
+            if (activeLeft.contains(touchPoint)) leftDown = true
+            if (activeRight.contains(touchPoint)) rightDown = true
+            if (activeJump.contains(touchPoint)) jumpDown = true
             if (pauseHit.contains(touchPoint)) pauseDown = true
             if (restartHit.contains(touchPoint)) restartDown = true
             if (menuHit.contains(touchPoint)) menuDown = true
