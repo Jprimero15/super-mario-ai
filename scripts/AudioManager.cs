@@ -7,11 +7,6 @@ public partial class AudioManager : Node
     private const string SfxBus = "SFX";
     private const int SfxPlayerCount = 8;
 
-    private static readonly string[] SfxTypes =
-    {
-        "jump", "coin", "stomp", "hit", "shield", "game_over"
-    };
-
     public float MusicVolume { get; private set; } = 0.8f;
     public float SfxVolume { get; private set; } = 0.9f;
 
@@ -22,38 +17,34 @@ public partial class AudioManager : Node
     {
         EnsureBus(MusicBus);
         EnsureBus(SfxBus);
-        BuildSfxPlayers();
+        CreateSfxPlayers();
         LoadSettings();
-        ApplyMusic();
-        ApplySfx();
+        ApplyVolumes();
     }
 
     public void SetMusicVolume(float value)
     {
         MusicVolume = Mathf.Clamp(value, 0.0f, 1.0f);
-        ApplyMusic();
+        SetBusVolume(MusicBus, MusicVolume);
         SaveSettings();
     }
 
     public void SetSfxVolume(float value)
     {
         SfxVolume = Mathf.Clamp(value, 0.0f, 1.0f);
-        ApplySfx();
+        SetBusVolume(SfxBus, SfxVolume);
         SaveSettings();
     }
 
     public void PlaySfx(string type)
     {
-        if (string.IsNullOrEmpty(type) || SfxVolume <= 0.0f || _sfxPlayers.Length == 0)
+        if (string.IsNullOrEmpty(type) || SfxVolume <= 0.0f)
             return;
 
-        string path = $"res://audio/sfx/{type}.ogg";
-        if (!ResourceLoader.Exists(path))
-            path = $"res://audio/sfx/{type}.wav";
-        if (!ResourceLoader.Exists(path))
+        if (_sfxPlayers.Length == 0)
             return;
 
-        AudioStream stream = ResourceLoader.Load<AudioStream>(path);
+        AudioStream stream = LoadSfx(type);
         if (stream == null)
             return;
 
@@ -63,39 +54,71 @@ public partial class AudioManager : Node
         player.Play();
     }
 
-    private void BuildSfxPlayers()
+    private AudioStream LoadSfx(string type)
+    {
+        string oggPath = "res://audio/sfx/" + type + ".ogg";
+        if (ResourceLoader.Exists(oggPath))
+        {
+            AudioStream ogg = ResourceLoader.Load<AudioStream>(oggPath);
+            if (ogg != null)
+                return ogg;
+        }
+
+        string wavPath = "res://audio/sfx/" + type + ".wav";
+        if (ResourceLoader.Exists(wavPath))
+        {
+            AudioStream wav = ResourceLoader.Load<AudioStream>(wavPath);
+            if (wav != null)
+                return wav;
+        }
+
+        return null;
+    }
+
+    private void CreateSfxPlayers()
     {
         _sfxPlayers = new AudioStreamPlayer[SfxPlayerCount];
+
         for (int i = 0; i < _sfxPlayers.Length; i++)
         {
-            var player = new AudioStreamPlayer
-            {
-                Name = $"SfxPlayer{i}",
-                Bus = SfxBus,
-                ProcessMode = ProcessModeEnum.Always
-            };
+            AudioStreamPlayer player = new AudioStreamPlayer();
+            player.Name = "SfxPlayer" + i;
+            player.Bus = SfxBus;
+            player.ProcessMode = ProcessModeEnum.Always;
             AddChild(player);
             _sfxPlayers[i] = player;
         }
     }
 
-    private void ApplyMusic() => SetBusVolume(MusicBus, MusicVolume);
-    private void ApplySfx() => SetBusVolume(SfxBus, SfxVolume);
+    private void ApplyVolumes()
+    {
+        SetBusVolume(MusicBus, MusicVolume);
+        SetBusVolume(SfxBus, SfxVolume);
+    }
 
     private void SetBusVolume(string busName, float value)
     {
-        int index = AudioServer.GetBusIndex(busName);
-        if (index >= 0)
-            AudioServer.SetBusVolumeDb(index, Mathf.LinearToDb(Mathf.Max(value, 0.0001f)));
+        int busIndex = AudioServer.GetBusIndex(busName);
+        if (busIndex < 0)
+            return;
+
+        if (value <= 0.0f)
+            AudioServer.SetBusMute(busIndex, true);
+        else
+        {
+            AudioServer.SetBusMute(busIndex, false);
+            AudioServer.SetBusVolumeDb(busIndex, Mathf.LinearToDb(value));
+        }
     }
 
-    private void EnsureBus(string name)
+    private void EnsureBus(string busName)
     {
-        if (AudioServer.GetBusIndex(name) >= 0)
+        if (AudioServer.GetBusIndex(busName) >= 0)
             return;
 
         AudioServer.AddBus();
-        AudioServer.SetBusName(AudioServer.BusCount - 1, name);
+        int index = AudioServer.BusCount - 1;
+        AudioServer.SetBusName(index, busName);
     }
 
     private void LoadSettings()
@@ -106,6 +129,7 @@ public partial class AudioManager : Node
 
         Variant music = config.GetValue("audio", "music", 0.8f);
         Variant sfx = config.GetValue("audio", "sfx", 0.9f);
+
         MusicVolume = Mathf.Clamp(music.AsSingle(), 0.0f, 1.0f);
         SfxVolume = Mathf.Clamp(sfx.AsSingle(), 0.0f, 1.0f);
     }
@@ -118,6 +142,6 @@ public partial class AudioManager : Node
 
         Error error = config.Save(SettingsPath);
         if (error != Error.Ok)
-            GD.PushWarning("Could not save audio settings: " + error);
+            GD.PushWarning("Could not save settings.cfg: " + error);
     }
 }
