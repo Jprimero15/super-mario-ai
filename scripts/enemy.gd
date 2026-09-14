@@ -1,42 +1,96 @@
 extends CharacterBody2D
 class_name MaryouEnemy
 
-var tier := 0
+signal player_contact(enemy: MaryouEnemy)
+signal stomped(enemy: MaryouEnemy)
+
+var kind := 0
 var speed := 70.0
 var size := 30.0
 var defeated := false
+var base_y := 0.0
+var phase := 0.0
+var hit_area: Area2D
 
-func setup(enemy_tier: int) -> void:
-	tier = enemy_tier
-	size = [28.0, 36.0, 48.0][clamp(tier, 0, 2)]
-	speed = [62.0, 72.0, 84.0][clamp(tier, 0, 2)]
+func setup(enemy_kind: int) -> void:
+	kind = clampi(enemy_kind, 0, 2)
+	size = [30.0, 34.0, 32.0][kind]
+	speed = [68.0, 82.0, 108.0][kind]
+	collision_layer = 4
+	collision_mask = 2
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(size, size)
 	var collider := CollisionShape2D.new()
 	collider.shape = shape
 	add_child(collider)
+	hit_area = Area2D.new()
+	hit_area.collision_layer = 0
+	hit_area.collision_mask = 1
+	hit_area.monitoring = true
+	var hit_shape := CollisionShape2D.new()
+	var hit_box := RectangleShape2D.new()
+	hit_box.size = Vector2(size + 10.0, size + 10.0)
+	hit_shape.shape = hit_box
+	hit_area.add_child(hit_shape)
+	hit_area.body_entered.connect(_on_player_entered)
+	add_child(hit_area)
+	base_y = position.y
+	phase = position.x * 0.02
 	z_index = 7
 	queue_redraw()
 
 func tick(delta: float, player_x: float) -> void:
 	if defeated:
 		velocity.y += 1600.0 * delta
-		position += velocity * delta
+		move_and_slide()
 		return
-	velocity.x = -speed if player_x < position.x else speed
-	velocity.y += 1500.0 * delta
+	var direction := -1.0 if player_x < position.x else 1.0
+	match kind:
+		0:
+			velocity.x = direction * speed
+			velocity.y += 1500.0 * delta
+		1:
+			velocity.x = direction * speed * 0.65
+			phase += delta * 5.0
+			var target_y := base_y - absf(sin(phase)) * 75.0
+			velocity.y = (target_y - position.y) * 8.0
+		2:
+			velocity.x = direction * speed
+			velocity.y += 1500.0 * delta
+			if absf(player_x - position.x) < 240.0:
+				velocity.x = direction * (speed + 55.0)
 	move_and_slide()
-	queue_redraw()
+		queue_redraw()
+
+func _on_player_entered(body: Node2D) -> void:
+	if defeated or not body is MaryouPlayer:
+		return
+	var player := body as MaryouPlayer
+	if player.velocity.y > 50.0 and player.position.y < position.y - 8.0:
+		defeat()
+		player.velocity.y = -400.0
+		stomped.emit(self)
+	else:
+		player_contact.emit(self)
 
 func defeat() -> void:
+	if defeated:
+		return
 	defeated = true
+	hit_area.set_deferred("monitoring", false)
 	velocity = Vector2(velocity.x * 0.2, -330.0)
+	queue_redraw()
 
 func _draw() -> void:
 	var half := size * 0.5
-	draw_circle(Vector2(0, -half * 0.12), half, Color("#ef6a71"))
-	draw_circle(Vector2(-half * 0.32, -half * 0.18), half * 0.13, Color("#ffffff"))
-	draw_circle(Vector2(half * 0.32, -half * 0.18), half * 0.13, Color("#ffffff"))
+	var body_color := [Color("#ef6a71"), Color("#d58aff"), Color("#ff9a54")][kind]
+	draw_circle(Vector2(0, -half * 0.12), half, body_color)
+	if kind == 1:
+		draw_arc(Vector2.ZERO, half + 5.0, 0.0, TAU, 24, Color("#dcbcff"), 3.0)
+	elif kind == 2:
+		draw_line(Vector2(-half, -half), Vector2(half, half), Color("#ffd0a8"), 3.0)
+		draw_line(Vector2(half, -half), Vector2(-half, half), Color("#ffd0a8"), 3.0)
+	draw_circle(Vector2(-half * 0.32, -half * 0.18), half * 0.13, Color.WHITE)
+	draw_circle(Vector2(half * 0.32, -half * 0.18), half * 0.13, Color.WHITE)
 	draw_circle(Vector2(-half * 0.32, -half * 0.18), half * 0.06, Color("#202938"))
 	draw_circle(Vector2(half * 0.32, -half * 0.18), half * 0.06, Color("#202938"))
-	draw_rect(Rect2(-half * 0.55, half * 0.24, half * 1.1, half * 0.16), Color("#202938"))
