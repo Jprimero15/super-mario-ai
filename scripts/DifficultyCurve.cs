@@ -1,6 +1,6 @@
 using Godot;
 
-public static class MaryouDifficultyCurve
+public static class DifficultyCurve
 {
     private const float MaxSpeed = 520.0f;
     private const float MaxDistance = 1800.0f;
