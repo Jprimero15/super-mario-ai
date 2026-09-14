@@ -64,7 +64,6 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 	for hole in holes:
 		_add_hole_warning(root, hole)
 
-	# New environment sheet: vary trees, bushes, rocks and signs between chunks.
 	if chunk_index > 0:
 		var decor_count := rng.randi_range(2, 4)
 		for i in range(decor_count):
@@ -156,9 +155,10 @@ func _add_environment(parent: Node2D, x: float, source_y: float) -> void:
 		sprite.position = Vector2(x, GROUND_Y - 63.0)
 	else:
 		sprite.region_rect = Rect2(256.0, 0.0, 104.0, 126.0)
+		sprite.position = Vector2(x, GROUND_Y - 63.0)
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.scale = Vector2(0.78, 0.78)
-	sprite.z_index = -1
+	sprite.z_index = 1
 	parent.add_child(sprite)
 
 func _add_hazard(parent: Node2D, pipe: Rect2) -> void:
