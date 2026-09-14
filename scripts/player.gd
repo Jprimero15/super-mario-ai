@@ -3,8 +3,11 @@ class_name MaryouPlayer
 
 @export_category("Movement")
 @export var gravity := 1850.0
+@export var terminal_velocity := 1050.0
 @export var jump_velocity := -720.0
+@export var jump_cut_velocity := -260.0
 @export var side_accel := 2100.0
+@export var side_decel := 2600.0
 @export var max_side_speed := 190.0
 @export var coyote_time := 0.12
 @export var jump_buffer_time := 0.14
@@ -54,52 +57,89 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump_press
 	hit_invulnerability = maxf(0.0, hit_invulnerability - delta)
 	if shield_time > 0.0:
 		shield_time = maxf(0.0, shield_time - delta)
-		if shield_time == 0.0: shielded = false
+		if shield_time == 0.0:
+			shielded = false
+
 	if shake_time > 0.0:
 		shake_time = maxf(0.0, shake_time - delta)
-		if is_instance_valid(camera): camera.offset = Vector2(randf_range(-shake_strength, shake_strength), randf_range(-shake_strength, shake_strength))
-	elif is_instance_valid(camera): camera.offset = camera.offset.lerp(Vector2.ZERO, minf(delta * 14.0, 1.0))
+		if is_instance_valid(camera):
+			camera.offset = Vector2(randf_range(-shake_strength, shake_strength), randf_range(-shake_strength, shake_strength))
+	elif is_instance_valid(camera):
+		camera.offset = camera.offset.lerp(Vector2.ZERO, minf(delta * 14.0, 1.0))
+
 	if dead:
-		velocity.y += gravity * delta
+		velocity.y = minf(velocity.y + gravity * delta, terminal_velocity)
 		move_and_slide()
 		_set_animation("dead")
 		queue_redraw()
 		return
-	if jump_pressed: jump_buffer_timer = jump_buffer_time
-	else: jump_buffer_timer = maxf(0.0, jump_buffer_timer - delta)
-	if is_on_floor(): coyote_timer = coyote_time
-	else: coyote_timer = maxf(0.0, coyote_timer - delta)
-	velocity.x = target_speed
-	var direction := Input.get_axis("move_left", "move_right")
-	if left: direction -= 1.0
-	if right: direction += 1.0
+
+	# Buffer the jump input so a press just before landing is still honored.
+	if jump_pressed:
+		jump_buffer_timer = jump_buffer_time
+	else:
+		jump_buffer_timer = maxf(0.0, jump_buffer_timer - delta)
+
+	# Coyote time is refreshed while grounded and persists briefly after walking off an edge.
+	if is_on_floor():
+		coyote_timer = coyote_time
+	else:
+		coyote_timer = maxf(0.0, coyote_timer - delta)
+
+	var direction := 0.0
+	if left:
+		direction -= 1.0
+	if right:
+		direction += 1.0
+	direction = clampf(direction, -1.0, 1.0)
+
+	# The runner has a forward target speed, while player input adds controlled air/ground steering.
+	var desired_x := target_speed + direction * max_side_speed
 	if direction != 0.0:
-		velocity.x = clampf(velocity.x + direction * side_accel * delta, target_speed - max_side_speed, target_speed + max_side_speed)
-	else: velocity.x = move_toward(velocity.x, target_speed, side_accel * delta)
+		velocity.x = move_toward(velocity.x, desired_x, side_accel * delta)
+	else:
+		velocity.x = move_toward(velocity.x, target_speed, side_decel * delta)
+
 	if jump_buffer_timer > 0.0 and coyote_timer > 0.0:
 		velocity.y = jump_velocity
 		jump_buffer_timer = 0.0
 		coyote_timer = 0.0
 		stretch = 1.18
-	if not jump_held and velocity.y < -260.0: velocity.y = -260.0
-	velocity.y += gravity * delta
+
+	# Variable jump height: releasing jump shortens the ascent without snapping velocity to zero.
+	if not jump_held and velocity.y < jump_cut_velocity:
+		velocity.y = jump_cut_velocity
+
+	velocity.y = minf(velocity.y + gravity * delta, terminal_velocity)
 	move_and_slide()
-	if is_on_floor(): squash = move_toward(squash, 1.0, delta * 8.0)
+
+	if is_on_floor():
+		squash = move_toward(squash, 1.0, delta * 8.0)
+	else:
+		squash = move_toward(squash, 1.0, delta * 4.0)
 	stretch = move_toward(stretch, 1.0, delta * 6.0)
-	if hit_invulnerability > 0.0: _set_animation("hurt")
-	elif not is_on_floor(): _set_animation("jump" if velocity.y < 0.0 else "fall")
-	elif absf(velocity.x) > target_speed + 25.0: _set_animation("run")
-	else: _set_animation("idle")
-	if is_instance_valid(animated_sprite) and absf(direction) > 0.01: animated_sprite.flip_h = direction < 0.0
+
+	if hit_invulnerability > 0.0:
+		_set_animation("hurt")
+	elif not is_on_floor():
+		_set_animation("jump" if velocity.y < 0.0 else "fall")
+	elif absf(velocity.x - target_speed) > 25.0:
+		_set_animation("run")
+	else:
+		_set_animation("idle")
+	if is_instance_valid(animated_sprite) and absf(direction) > 0.01:
+		animated_sprite.flip_h = direction < 0.0
 	queue_redraw()
 
 func _set_animation(name: String) -> void:
-	if not is_instance_valid(animated_sprite) or last_animation == name: return
+	if not is_instance_valid(animated_sprite) or last_animation == name:
+		return
 	last_animation = name
 	animated_sprite.play(name)
 
 func take_hit() -> bool:
-	if dead or hit_invulnerability > 0.0: return false
+	if dead or hit_invulnerability > 0.0:
+		return false
 	if shielded:
 		shielded = false
 		shield_time = 0.0
@@ -128,7 +168,8 @@ func shake(strength: float, duration: float) -> void:
 	shake_time = maxf(shake_time, duration)
 
 func kill() -> void:
-	if dead: return
+	if dead:
+		return
 	dead = true
 	velocity = Vector2(velocity.x * 0.35, -420.0)
 	squash = 0.72
@@ -137,4 +178,5 @@ func kill() -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	if shielded: draw_arc(Vector2.ZERO, 34.0, 0.0, TAU, 32, Color(0.35, 0.9, 0.85, 0.75), 3.0)
+	if shielded:
+		draw_arc(Vector2.ZERO, 34.0, 0.0, TAU, 32, Color(0.35, 0.9, 0.85, 0.75), 3.0)
