@@ -12,14 +12,12 @@ class_name MaryouPlayer
 @export var coyote_time := 0.11
 @export var jump_buffer_time := 0.13
 
-# Jungle-boy atlas: 1024x1024, 4x4 grid, 256x256 frames.
-const SPRITE_CELL := 256.0
+# Maryou jungle-boy atlas: 1024x1024, 4x4 grid, 256px per frame.
 const WIDTH := 32.0
 const HEIGHT := 50.0
 const BODY_OFFSET_Y := 2.0
 const HIT_INVULNERABILITY := 1.15
-const JUNGLE_BOY_ATLAS := "res://assets/sprites/maryou_jungle_boy.png"
-const LEGACY_SPRITE_FRAMES := preload("res://assets/sprites/maryou_frames.tres")
+const SPRITE_FRAMES := preload("res://assets/sprites/maryou_frames.tres")
 const GAME_ZOOM := Vector2(1.20, 1.20)
 
 var dead := false
@@ -51,10 +49,10 @@ func _ready() -> void:
 	add_child(collider)
 
 	animated_sprite = AnimatedSprite2D.new()
-	animated_sprite.sprite_frames = _build_sprite_frames()
+	animated_sprite.sprite_frames = SPRITE_FRAMES
 	animated_sprite.animation = &"idle"
 	animated_sprite.position = Vector2(0, -2)
-	# Each atlas cell is 256px; scale it to match the existing gameplay body.
+	# 256px atlas cells are displayed at 25% to preserve the existing gameplay scale.
 	animated_sprite.scale = Vector2(0.25, 0.25)
 	animated_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	animated_sprite.speed_scale = 1.0
@@ -68,56 +66,6 @@ func _ready() -> void:
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 7.0
 	add_child(camera)
-
-func _build_sprite_frames() -> SpriteFrames:
-	# Use the new 256px atlas when it has been added to the repository.
-	# Keeping the legacy resource as a fallback makes the game boot safely
-	# before the new PNG is committed.
-	if ResourceLoader.exists(JUNGLE_BOY_ATLAS):
-		var texture := load(JUNGLE_BOY_ATLAS) as Texture2D
-		if texture != null:
-			return _create_jungle_boy_frames(texture)
-	return LEGACY_SPRITE_FRAMES
-
-func _create_jungle_boy_frames(texture: Texture2D) -> SpriteFrames:
-	var frames := SpriteFrames.new()
-	frames.remove_animation(&"default")
-
-	# Rows in the atlas:
-	# 0 idle, 1 run, 2 jump, 3 land. Each row contains four 256x256 frames.
-	_add_atlas_animation(frames, "idle", texture, 0, true, 4.0)
-	_add_atlas_animation(frames, "run", texture, 1, true, 10.0)
-	_add_atlas_animation(frames, "jump", texture, 2, false, 8.0)
-	_add_atlas_animation(frames, "land", texture, 3, false, 10.0)
-
-	# These gameplay states are kept as aliases/short poses so existing damage
-	# and death logic never requests a missing animation.
-	_add_single_frame_animation(frames, "hurt", texture, 2, 1)
-	_add_single_frame_animation(frames, "dead", texture, 3, 0)
-	_add_single_frame_animation(frames, "fall", texture, 2, 2)
-
-	return frames
-
-func _add_atlas_animation(frames: SpriteFrames, name: StringName, atlas: Texture2D, row: int, loop: bool, speed: float) -> void:
-	frames.add_animation(name)
-	frames.set_animation_loop(name, loop)
-	frames.set_animation_speed(name, speed)
-	for column in 4:
-		var atlas_texture := AtlasTexture.new()
-		atlas_texture.atlas = atlas
-		atlas_texture.region = Rect2(column * SPRITE_CELL, row * SPRITE_CELL, SPRITE_CELL, SPRITE_CELL)
-		atlas_texture.filter_clip = true
-		frames.add_frame(name, atlas_texture)
-
-func _add_single_frame_animation(frames: SpriteFrames, name: StringName, atlas: Texture2D, row: int, column: int) -> void:
-	frames.add_animation(name)
-	frames.set_animation_loop(name, false)
-	frames.set_animation_speed(name, 1.0)
-	var atlas_texture := AtlasTexture.new()
-	atlas_texture.atlas = atlas
-	atlas_texture.region = Rect2(column * SPRITE_CELL, row * SPRITE_CELL, SPRITE_CELL, SPRITE_CELL)
-	atlas_texture.filter_clip = true
-	frames.add_frame(name, atlas_texture)
 
 func tick(delta: float, target_speed: float, left: bool, right: bool, jump_pressed: bool, jump_held: bool) -> void:
 	hit_invulnerability = maxf(0.0, hit_invulnerability - delta)
@@ -154,8 +102,10 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump_press
 		coyote_timer = maxf(0.0, coyote_timer - delta)
 
 	var direction := 0.0
-	if left: direction -= 1.0
-	if right: direction += 1.0
+	if left:
+		direction -= 1.0
+	if right:
+		direction += 1.0
 	direction = clampf(direction, -1.0, 1.0)
 
 	var desired_x := target_speed + direction * max_side_speed
@@ -195,7 +145,6 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump_press
 	elif not now_on_floor:
 		_set_animation("jump" if velocity.y < 0.0 else "fall")
 	elif landing_timer > 0.0:
-		# Let the four-frame landing animation finish before returning to idle/run.
 		if not animated_sprite.is_playing():
 			landing_timer = 0.0
 	elif absf(velocity.x) > 45.0:
@@ -210,6 +159,7 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump_press
 			animated_sprite.flip_h = true
 		else:
 			animated_sprite.flip_h = false
+
 		if last_animation == "run":
 			animated_sprite.speed_scale = clampf(absf(velocity.x) / 180.0, 0.85, 1.75)
 		else:
@@ -237,6 +187,7 @@ func take_damage(amount: int = 1) -> bool:
 		_set_animation("hurt", true)
 		queue_redraw()
 		return false
+
 	hit_invulnerability = HIT_INVULNERABILITY
 	squash = 0.82
 	velocity.y = minf(velocity.y, -240.0)
