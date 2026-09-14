@@ -1,7 +1,6 @@
 using Godot;
-using System.Collections.Generic;
 
-public partial class MaryouGame : Node2D
+public partial class Game : Node2D
 {
     private readonly Texture2D _backgrounds = GD.Load<Texture2D>("res://assets/world/backgrounds.svg");
     private const float WorldHeight = 720, GroundY = 560, BackdropWidth = 720;
