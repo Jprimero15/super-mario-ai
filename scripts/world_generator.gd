@@ -105,8 +105,9 @@ func _add_solid(parent: Node2D, rect: Rect2) -> void:
 
 func _add_hazard(parent: Node2D, pipe: Rect2) -> void:
 	var area := HazardScript.new()
-	area.position = pipe.position + Vector2(pipe.size.x * 0.5, pipe.size.y * 0.5)
-	area.setup(pipe.size + Vector2(8, 0))
+	var hazard_height := maxf(10.0, pipe.size.y - 20.0)
+	area.position = pipe.position + Vector2(pipe.size.x * 0.5, pipe.size.y * 0.5 + 10.0)
+	area.setup(Vector2(pipe.size.x + 8.0, hazard_height))
 	area.hit_player.connect(func(): hazard_hit.emit())
 	parent.add_child(area)
 
@@ -135,7 +136,7 @@ func _safe(rect: Rect2, occupied: Array[Rect2], holes: Array[Rect2], padding: fl
 
 func _prune(player_x: float) -> void:
 	var prune_before := player_x - CHUNK_WIDTH * 5.0
-	for key in active_chunks.keys():
+	for key in active_chunks.keys().duplicate():
 		var root: Node = active_chunks[key]
 		if is_instance_valid(root) and float(key) * CHUNK_WIDTH + CHUNK_WIDTH < prune_before:
 			root.queue_free()
