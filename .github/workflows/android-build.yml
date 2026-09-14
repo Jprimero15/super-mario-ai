@@ -74,6 +74,22 @@ jobs:
           unzip -q /tmp/templates.tpz -d /tmp/godot-templates
           cp -R /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
 
+      - name: Validate every GDScript script
+        shell: bash
+        run: |
+          set -euo pipefail
+          failed=0
+          while IFS= read -r -d '' script; do
+            echo "[GDScript check] $script"
+            if ! godot --headless --path . --check-only --script "$script"; then
+              failed=1
+            fi
+          done < <(find . -type f -name '*.gd' -not -path './.git/*' -print0)
+          if [ "$failed" -ne 0 ]; then
+            echo "GDScript validation failed: one or more scripts have parse/type errors."
+            exit 1
+          fi
+
       - name: Validate Godot project
         shell: bash
         run: |
@@ -93,7 +109,21 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
-          set -euxo pipefail
+          set -euo pipefail
+          # Keep a hard GDScript validation immediately before export so this
+          # stage cannot produce an APK when any GDScript script fails to parse.
+          failed=0
+          while IFS= read -r -d '' script; do
+            echo "[Pre-export GDScript check] $script"
+            if ! godot --headless --path . --check-only --script "$script"; then
+              failed=1
+            fi
+          done < <(find . -type f -name '*.gd' -not -path './.git/*' -print0)
+          if [ "$failed" -ne 0 ]; then
+            echo "Refusing Android export because GDScript validation failed."
+            exit 1
+          fi
+
           mkdir -p build/android
           godot --headless --path . --install-android-build-template --export-debug "Android Debug" build/android/maryou-ai-debug.apk
           test -s build/android/maryou-ai-debug.apk
