@@ -19,6 +19,9 @@ static func speed_for_steps(distance_steps: int) -> float:
 static func hole_chance(distance_steps: int) -> float:
 	return lerpf(0.045, 0.14, progress(distance_steps))
 
+static func pipe_chance(distance_steps: int) -> float:
+	return lerpf(0.10, 0.34, progress(distance_steps))
+
 static func enemy_count(distance_steps: int) -> int:
 	return clampi(1 + int(distance_steps / 420.0), 0, 4)
 
