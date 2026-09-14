@@ -22,6 +22,12 @@ func _ready() -> void:
 	var collider := CollisionShape2D.new()
 	collider.shape = shape
 	add_child(collider)
+	var camera := Camera2D.new()
+	camera.position = Vector2(250, -30)
+	camera.enabled = true
+	camera.position_smoothing_enabled = true
+	camera.position_smoothing_speed = 6.0
+	add_child(camera)
 	queue_redraw()
 
 func get_rect() -> Rect2:
@@ -33,8 +39,7 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump: bool
 		position += velocity * delta
 		queue_redraw()
 		return
-	var run_speed := target_speed
-	velocity.x = run_speed
+	velocity.x = target_speed
 	if allow_input:
 		var direction := Input.get_axis("move_left", "move_right")
 		if left:
@@ -43,9 +48,9 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump: bool
 			direction += 1.0
 		if direction != 0.0:
 			velocity.x += direction * SIDE_ACCEL * delta
-			velocity.x = clamp(velocity.x, run_speed - MAX_SIDE_SPEED, run_speed + MAX_SIDE_SPEED)
+			velocity.x = clamp(velocity.x, target_speed - MAX_SIDE_SPEED, target_speed + MAX_SIDE_SPEED)
 		else:
-			velocity.x = move_toward(velocity.x, run_speed, SIDE_ACCEL * delta)
+			velocity.x = move_toward(velocity.x, target_speed, SIDE_ACCEL * delta)
 	if allow_input and jump and is_on_floor():
 		velocity.y = JUMP_VELOCITY
 		stretch = 1.18
@@ -103,7 +108,7 @@ func _draw() -> void:
 	draw_rect(Rect2(-14, 18, 10, 7), Color("#202938"))
 	draw_rect(Rect2(4, 18, 10, 7), Color("#202938"))
 	if shielded:
-		draw_arc(Vector2.ZERO, 34.0, 0.0, TAU, 32, Color(0.35,0.9,0.85,0.75), 3.0)
+		draw_arc(Vector2.ZERO, 34.0, 0.0, TAU, 32, Color(0.35, 0.9, 0.85, 0.75), 3.0)
 
 func _box(color: Color, radius: float) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
