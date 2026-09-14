@@ -7,7 +7,6 @@ const BACKGROUNDS := preload("res://assets/world/backgrounds.svg")
 const TILES := preload("res://assets/world/tiles.svg")
 const WORLD_HEIGHT: float = 720.0
 const GROUND_Y: float = 560.0
-const VIEW_WIDTH: float = 1280.0
 const BACKDROP_WIDTH: float = 720.0
 const BACKGROUND_TILE_SIZE: float = 256.0
 
@@ -77,7 +76,7 @@ func _physics_process(delta: float) -> void:
 
 	if player.position.y > WORLD_HEIGHT + 80.0:
 		_finish_run()
-	hud.update_stats(ScoreManager.score(), 1, ScoreManager.coins, ScoreManager.multiplier(), MaryouDifficultyCurve.tier_for_steps(steps), int(player.position.x / 32.0))
+	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps))
 	queue_redraw()
 
 func _wire_enemies() -> void:
@@ -125,14 +124,14 @@ func _finish_run() -> void:
 	player.kill()
 	get_tree().paused = false
 	if is_instance_valid(hud):
-		hud.show_game_over(ScoreManager.score(), ScoreManager.best_score)
+		hud.show_game_over(ScoreManager.steps, ScoreManager.best_steps)
 
 func _toggle_pause() -> void:
 	if not is_instance_valid(player) or player.dead:
 		return
 	var value: bool = not get_tree().paused
 	get_tree().paused = value
-	if is_instance_valid(hud): hud.show_pause(value, ScoreManager.score(), ScoreManager.best_score)
+	if is_instance_valid(hud): hud.show_pause(value, ScoreManager.steps, ScoreManager.best_steps)
 
 func _restart() -> void:
 	get_tree().paused = false
