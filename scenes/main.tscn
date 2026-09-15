@@ -42,7 +42,7 @@ motion_mirroring = Vector2(1774, 0)
 
 [node name="ForestBackground" type="Sprite2D" parent="ParallaxBackground/ParallaxLayer"]
 texture = ExtResource("2")
-position = Vector2(887, -177)
+position = Vector2(887, 267)
 scale = Vector2(1.1549479, 1.1549479)
 texture_filter = 1
 texture_repeat = 1
