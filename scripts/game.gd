@@ -6,7 +6,7 @@ const HUDScene = preload("res://scripts/hud.gd")
 const BACKGROUNDS := preload("res://assets/world/backgrounds.svg")
 const TILES := preload("res://assets/world/tiles.svg")
 const FAR_TEXTURE := preload("res://assets/world/parallax/far.png")
-const MID_TEXTURE := preload("res://assets/world/parallax/mid.png")
+const MID_TEXTURE := preload("res://assets/world/parallax/middle.png")
 const BACK_TEXTURE := preload("res://assets/world/parallax/back.png")
 const WORLD_HEIGHT: float = 720.0
 const GROUND_Y: float = 560.0
@@ -14,7 +14,6 @@ const GROUND_TILE_SIZE: float = 32.0
 const FAR_PARALLAX: float = 0.12
 const MID_PARALLAX: float = 0.22
 const BACK_PARALLAX: float = 0.34
-const PARALLAX_Y: float = -120.0
 
 var player: MaryouPlayer
 var world: MaryouWorldGenerator
@@ -213,21 +212,6 @@ func _draw() -> void:
 	_draw_parallax_layer(MID_TEXTURE, cam_x, MID_PARALLAX)
 	_draw_parallax_layer(BACK_TEXTURE, cam_x, BACK_PARALLAX)
 
-	var first_visible_x: float = cam_x - 1700.0
-	var last_visible_x: float = cam_x + 1900.0
-	if not is_instance_valid(world):
-		return
-	for chunk_value in world.active_chunks.values():
-		if not is_instance_valid(chunk_value):
-			continue
-		var chunk: MaryouChunk = chunk_value as MaryouChunk
-		if chunk == null:
-			continue
-		for solid in chunk.solids:
-			if solid.end.x < first_visible_x or solid.position.x > last_visible_x:
-				continue
-			draw_texture_rect_region(TILES, solid, Rect2(0.0, 0.0, 64.0, 64.0))
-
 func _draw_parallax_layer(texture: Texture2D, cam_x: float, parallax: float) -> void:
 	if texture == null:
 		return
@@ -236,7 +220,7 @@ func _draw_parallax_layer(texture: Texture2D, cam_x: float, parallax: float) -> 
 		return
 	var origin_x := cam_x * (1.0 - parallax)
 	var first_x := floorf((origin_x - size.x) / size.x) * size.x
-	var y := GROUND_Y - size.y - PARALLAX_Y
+	var y := GROUND_Y - size.y
 	var count := int(ceil((3400.0 / size.x))) + 3
 	for i in range(count):
 		var x := first_x + float(i) * size.x
