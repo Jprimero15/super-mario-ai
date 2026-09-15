@@ -5,21 +5,21 @@ const WorldScene = preload("res://scripts/world_generator.gd")
 const HUDScene = preload("res://scripts/hud.gd")
 const BACKGROUNDS := preload("res://assets/world/backgrounds.svg")
 const TILES := preload("res://assets/world/tiles.svg")
+const FAR_TEXTURE := preload("res://assets/world/parallax/far.png")
+const MID_TEXTURE := preload("res://assets/world/parallax/mid.png")
+const BACK_TEXTURE := preload("res://assets/world/parallax/back.png")
 const WORLD_HEIGHT: float = 720.0
 const GROUND_Y: float = 560.0
-const BACKDROP_WIDTH: float = 2048.0
-const BACKGROUND_HEIGHT: float = 256.0
 const GROUND_TILE_SIZE: float = 32.0
-const BACKGROUND_PARALLAX: float = 0.18
-const PANORAMA_PATH := "res://assets/world/background_panorama.png"
-const PANORAMA_GROUND_Y: float = 560.0
-const PANORAMA_ART_BOTTOM: float = 207.0
+const FAR_PARALLAX: float = 0.12
+const MID_PARALLAX: float = 0.22
+const BACK_PARALLAX: float = 0.34
+const PARALLAX_Y: float = -120.0
 
 var player: MaryouPlayer
 var world: MaryouWorldGenerator
 var enemies: Node2D
 var hud: MaryouHUD
-var background_panorama: Texture2D
 var steps: int = 0
 var hit_lock: bool = false
 var run_finishing: bool = false
@@ -33,9 +33,6 @@ func _ready() -> void:
 	lifecycle_token += 1
 	if OS.has_feature("android"):
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
-
-	if ResourceLoader.exists(PANORAMA_PATH):
-		background_panorama = load(PANORAMA_PATH) as Texture2D
 
 	var checkpoint_spawn := GameState.consume_checkpoint_respawn()
 	var spawning_at_checkpoint := checkpoint_spawn != Vector2.INF
@@ -212,24 +209,9 @@ func _juice(duration: float, time_scale: float, token: int) -> void:
 
 func _draw() -> void:
 	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
-
-	if background_panorama != null:
-		# The PNG has transparent sky and a ~207px-tall painted landscape.
-		# Keep it at native resolution so the art is not vertically stretched,
-		# and anchor its land edge exactly to the gameplay ground line.
-		var bg_origin_x := cam_x * (1.0 - BACKGROUND_PARALLAX)
-		var first_x := floorf((bg_origin_x - BACKDROP_WIDTH) / BACKDROP_WIDTH) * BACKDROP_WIDTH
-		var panorama_y := PANORAMA_GROUND_Y - PANORAMA_ART_BOTTOM
-		for i in range(4):
-			var x := first_x + float(i) * BACKDROP_WIDTH
-			draw_texture_rect(background_panorama, Rect2(x, panorama_y, BACKDROP_WIDTH, BACKGROUND_HEIGHT), false)
-	else:
-		# Fallback for builds where the new panorama has not been imported yet.
-		var first_x: float = floorf((cam_x - 1600.0) / 720.0) * 720.0
-		var source_rect := Rect2(0.0, 0.0, 256.0, 256.0)
-		for i in range(6):
-			var x: float = first_x + float(i) * 720.0
-			draw_texture_rect_region(BACKGROUNDS, Rect2(x, -40.0, 720.0, 720.0), source_rect)
+	_draw_parallax_layer(FAR_TEXTURE, cam_x, FAR_PARALLAX)
+	_draw_parallax_layer(MID_TEXTURE, cam_x, MID_PARALLAX)
+	_draw_parallax_layer(BACK_TEXTURE, cam_x, BACK_PARALLAX)
 
 	var first_visible_x: float = cam_x - 1700.0
 	var last_visible_x: float = cam_x + 1900.0
@@ -245,3 +227,17 @@ func _draw() -> void:
 			if solid.end.x < first_visible_x or solid.position.x > last_visible_x:
 				continue
 			draw_texture_rect_region(TILES, solid, Rect2(0.0, 0.0, 64.0, 64.0))
+
+func _draw_parallax_layer(texture: Texture2D, cam_x: float, parallax: float) -> void:
+	if texture == null:
+		return
+	var size := texture.get_size()
+	if size.x <= 0.0 or size.y <= 0.0:
+		return
+	var origin_x := cam_x * (1.0 - parallax)
+	var first_x := floorf((origin_x - size.x) / size.x) * size.x
+	var y := GROUND_Y - size.y - PARALLAX_Y
+	var count := int(ceil((3400.0 / size.x))) + 3
+	for i in range(count):
+		var x := first_x + float(i) * size.x
+		draw_texture_rect(texture, Rect2(x, y, size.x, size.y), false)
