@@ -12,7 +12,8 @@ const WORLD_HEIGHT: float = 720.0
 const GROUND_Y: float = 560.0
 const GROUND_TILE_SIZE: float = 32.0
 
-# Back is the deepest layer, Far is the middle layer, and Middle is closest.
+# Depth: Middle is closest, Far is behind it, Back is farthest.
+# Draw order is therefore Back -> Far -> Middle.
 const BACK_PARALLAX: float = 0.12
 const FAR_PARALLAX: float = 0.22
 const MID_PARALLAX: float = 0.34
@@ -209,9 +210,16 @@ func _juice(duration: float, time_scale: float, token: int) -> void:
 		Engine.time_scale = 1.0
 
 func _draw() -> void:
-	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
+	# Use the actual camera position, not the player position. The camera has
+	# a local X offset and smoothing, so using player.position causes parallax
+	# layers to drift out of sync with the rendered view.
+	var cam_x: float = 640.0
+	if is_instance_valid(player) and is_instance_valid(player.camera):
+		cam_x = player.camera.global_position.x
+	elif is_instance_valid(player):
+		cam_x = player.global_position.x
 
-	# Draw in depth order: back -> far -> middle.
+	# Correct depth stacking: farthest first, closest last.
 	_draw_parallax_layer(BACK_TEXTURE, cam_x, BACK_PARALLAX)
 	_draw_parallax_layer(FAR_TEXTURE, cam_x, FAR_PARALLAX)
 	_draw_parallax_layer(MID_TEXTURE, cam_x, MID_PARALLAX)
@@ -223,7 +231,8 @@ func _draw_parallax_layer(texture: Texture2D, cam_x: float, parallax: float) -> 
 	if size.x <= 0.0 or size.y <= 0.0:
 		return
 
-	# Native-size rendering. All three supplied sprites are 240px tall.
+	# Keep the supplied PNGs at their native dimensions. All three are 240px
+	# tall, so their bottoms share the same ground alignment at GROUND_Y.
 	var origin_x := cam_x * (1.0 - parallax)
 	var first_x := floorf((origin_x - size.x) / size.x) * size.x
 	var y := GROUND_Y - size.y
