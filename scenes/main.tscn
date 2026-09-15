@@ -1,9 +1,6 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource path="res://scripts/game_with_forest.gd" type="Script" id="1"]
-[ext_resource type="Texture2D" path="res://assets/world/parallax/back.png" id="3"]
-[ext_resource type="Texture2D" path="res://assets/world/parallax/far.png" id="4"]
-[ext_resource type="Texture2D" path="res://assets/world/parallax/middle.png" id="5"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_bg"]
 bg_color = Color(0.0627, 0.0941, 0.1529, 1)
@@ -34,36 +31,3 @@ offset_right = 1256.0
 offset_bottom = 696.0
 mouse_filter = 2
 color = Color(0.0863, 0.1333, 0.2196, 0.22)
-
-[node name="ForestParallax" type="Node2D" parent="."]
-z_index = -10
-
-[node name="Back" type="Parallax2D" parent="ForestParallax"]
-repeat_size = Vector2(144, 0)
-repeat_times = 3
-scroll_scale = Vector2(0.3, 0.3)
-
-[node name="Sprite2D" type="Sprite2D" parent="ForestParallax/Back"]
-texture = ExtResource("3")
-centered = false
-texture_filter = 1
-
-[node name="Far" type="Parallax2D" parent="ForestParallax"]
-repeat_size = Vector2(176, 0)
-repeat_times = 3
-scroll_scale = Vector2(0.55, 0.55)
-
-[node name="Sprite2D" type="Sprite2D" parent="ForestParallax/Far"]
-texture = ExtResource("4")
-centered = false
-texture_filter = 1
-
-[node name="Middle" type="Parallax2D" parent="ForestParallax"]
-repeat_size = Vector2(192, 0)
-repeat_times = 3
-scroll_scale = Vector2(0.8, 0.8)
-
-[node name="Sprite2D" type="Sprite2D" parent="ForestParallax/Middle"]
-texture = ExtResource("5")
-centered = false
-texture_filter = 1
