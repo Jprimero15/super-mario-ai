@@ -210,16 +210,15 @@ func _juice(duration: float, time_scale: float, token: int) -> void:
 		Engine.time_scale = 1.0
 
 func _draw() -> void:
-	# Use the actual camera position, not the player position. The camera has
-	# a local X offset and smoothing, so using player.position causes parallax
-	# layers to drift out of sync with the rendered view.
+	# The three PNGs are one compact layered background. Use the camera as the
+	# parallax reference so the stack stays locked to the viewport while moving.
 	var cam_x: float = 640.0
 	if is_instance_valid(player) and is_instance_valid(player.camera):
 		cam_x = player.camera.global_position.x
 	elif is_instance_valid(player):
 		cam_x = player.global_position.x
 
-	# Correct depth stacking: farthest first, closest last.
+	# Farthest is drawn first; closest is drawn last.
 	_draw_parallax_layer(BACK_TEXTURE, cam_x, BACK_PARALLAX)
 	_draw_parallax_layer(FAR_TEXTURE, cam_x, FAR_PARALLAX)
 	_draw_parallax_layer(MID_TEXTURE, cam_x, MID_PARALLAX)
@@ -231,10 +230,11 @@ func _draw_parallax_layer(texture: Texture2D, cam_x: float, parallax: float) -> 
 	if size.x <= 0.0 or size.y <= 0.0:
 		return
 
-	# Keep the supplied PNGs at their native dimensions. All three are 240px
-	# tall, so their bottoms share the same ground alignment at GROUND_Y.
-	var origin_x := cam_x * (1.0 - parallax)
-	var first_x := floorf((origin_x - size.x) / size.x) * size.x
+	# All layers share exactly the same vertical band. Horizontal repetition is
+	# based on a common world phase, then each layer receives only its parallax
+	# offset. This keeps the artwork compact/overlapping instead of separating it.
+	var world_phase := cam_x * parallax
+	var first_x := floorf((world_phase - size.x) / size.x) * size.x
 	var y := GROUND_Y - size.y
 	var count := int(ceil(3400.0 / size.x)) + 3
 	for i in range(count):
