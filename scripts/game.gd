@@ -11,9 +11,11 @@ const BACK_TEXTURE := preload("res://assets/world/parallax/back.png")
 const WORLD_HEIGHT: float = 720.0
 const GROUND_Y: float = 560.0
 const GROUND_TILE_SIZE: float = 32.0
-const FAR_PARALLAX: float = 0.12
-const MID_PARALLAX: float = 0.22
-const BACK_PARALLAX: float = 0.34
+
+# Back is the deepest layer, Far is the middle layer, and Middle is closest.
+const BACK_PARALLAX: float = 0.12
+const FAR_PARALLAX: float = 0.22
+const MID_PARALLAX: float = 0.34
 
 var player: MaryouPlayer
 var world: MaryouWorldGenerator
@@ -208,9 +210,11 @@ func _juice(duration: float, time_scale: float, token: int) -> void:
 
 func _draw() -> void:
 	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
+
+	# Draw in depth order: back -> far -> middle.
+	_draw_parallax_layer(BACK_TEXTURE, cam_x, BACK_PARALLAX)
 	_draw_parallax_layer(FAR_TEXTURE, cam_x, FAR_PARALLAX)
 	_draw_parallax_layer(MID_TEXTURE, cam_x, MID_PARALLAX)
-	_draw_parallax_layer(BACK_TEXTURE, cam_x, BACK_PARALLAX)
 
 func _draw_parallax_layer(texture: Texture2D, cam_x: float, parallax: float) -> void:
 	if texture == null:
@@ -218,10 +222,12 @@ func _draw_parallax_layer(texture: Texture2D, cam_x: float, parallax: float) -> 
 	var size := texture.get_size()
 	if size.x <= 0.0 or size.y <= 0.0:
 		return
+
+	# Native-size rendering. All three supplied sprites are 240px tall.
 	var origin_x := cam_x * (1.0 - parallax)
 	var first_x := floorf((origin_x - size.x) / size.x) * size.x
 	var y := GROUND_Y - size.y
-	var count := int(ceil((3400.0 / size.x))) + 3
+	var count := int(ceil(3400.0 / size.x)) + 3
 	for i in range(count):
 		var x := first_x + float(i) * size.x
 		draw_texture_rect(texture, Rect2(x, y, size.x, size.y), false)
