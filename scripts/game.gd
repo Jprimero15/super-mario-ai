@@ -3,20 +3,21 @@ extends Node2D
 const PlayerScene = preload("res://scripts/player.gd")
 const WorldScene = preload("res://scripts/world_generator.gd")
 const HUDScene = preload("res://scripts/hud.gd")
-const BACKGROUNDS := preload("res://assets/world/backgrounds.svg")
 const TILES := preload("res://assets/world/tiles.svg")
 const FAR_TEXTURE := preload("res://assets/world/parallax/far.png")
 const MID_TEXTURE := preload("res://assets/world/parallax/middle.png")
 const BACK_TEXTURE := preload("res://assets/world/parallax/back.png")
+
 const WORLD_HEIGHT: float = 720.0
 const GROUND_Y: float = 560.0
 const GROUND_TILE_SIZE: float = 32.0
 
-# Depth: Middle is closest, Far is behind it, Back is farthest.
-# Draw order is therefore Back -> Far -> Middle.
-const BACK_PARALLAX: float = 0.12
-const FAR_PARALLAX: float = 0.22
-const MID_PARALLAX: float = 0.34
+# The source art is intentionally small. Draw it larger as a single shared
+# visual band so the three layers stay compact and aligned.
+const BACKGROUND_HEIGHT: float = 360.0
+const BACK_PARALLAX: float = 0.10
+const FAR_PARALLAX: float = 0.20
+const MID_PARALLAX: float = 0.32
 
 var player: MaryouPlayer
 var world: MaryouWorldGenerator
@@ -27,6 +28,7 @@ var hit_lock: bool = false
 var run_finishing: bool = false
 var restart_pending: bool = false
 var lifecycle_token: int = 0
+var background_time: float = 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -72,6 +74,12 @@ func _ready() -> void:
 	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps), player.shielded)
 	queue_redraw()
 
+func _process(delta: float) -> void:
+	# Keep ambient background motion smooth without forcing the gameplay
+	# generator/physics to redraw just because a decorative particle moved.
+	background_time = fmod(background_time + delta, 10000.0)
+	queue_redraw()
+
 func _physics_process(delta: float) -> void:
 	if restart_pending or run_finishing or not is_instance_valid(player) or not is_instance_valid(world) or not is_instance_valid(hud):
 		return
@@ -101,7 +109,6 @@ func _physics_process(delta: float) -> void:
 	if player.position.y > WORLD_HEIGHT + 80.0:
 		_finish_run()
 	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps), player.shielded)
-	queue_redraw()
 
 func _wire_enemies() -> void:
 	for child in enemies.get_children():
@@ -176,7 +183,8 @@ func _toggle_pause() -> void:
 		return
 	var value: bool = not get_tree().paused
 	get_tree().paused = value
-	if is_instance_valid(hud): hud.show_pause(value, ScoreManager.steps, ScoreManager.best_steps)
+	if is_instance_valid(hud):
+		hud.show_pause(value, ScoreManager.steps, ScoreManager.best_steps)
 
 func _restart() -> void:
 	if restart_pending:
@@ -210,33 +218,94 @@ func _juice(duration: float, time_scale: float, token: int) -> void:
 		Engine.time_scale = 1.0
 
 func _draw() -> void:
-	# The three PNGs are one compact layered background. Use the camera as the
-	# parallax reference so the stack stays locked to the viewport while moving.
 	var cam_x: float = 640.0
+	var cam_y: float = 500.0
+	var camera_zoom := Vector2.ONE
 	if is_instance_valid(player) and is_instance_valid(player.camera):
 		cam_x = player.camera.global_position.x
+		cam_y = player.camera.global_position.y
+		camera_zoom = player.camera.zoom
 	elif is_instance_valid(player):
 		cam_x = player.global_position.x
 
-	# Farthest is drawn first; closest is drawn last.
-	_draw_parallax_layer(BACK_TEXTURE, cam_x, BACK_PARALLAX)
-	_draw_parallax_layer(FAR_TEXTURE, cam_x, FAR_PARALLAX)
-	_draw_parallax_layer(MID_TEXTURE, cam_x, MID_PARALLAX)
+	# Full world-space backdrop. This removes the large empty band visible in
+	# the old screenshot while leaving the actual platform/obstacle art on top.
+	var world_view_width := get_viewport_rect().size.x / maxf(camera_zoom.x, 0.01)
+	var world_view_height := get_viewport_rect().size.y / maxf(camera_zoom.y, 0.01)
+	draw_rect(
+		Rect2(cam_x - world_view_width * 1.5, cam_y - world_view_height * 1.5, world_view_width * 3.0, world_view_height * 3.0),
+		Color("#9ad65d")
+	)
 
-func _draw_parallax_layer(texture: Texture2D, cam_x: float, parallax: float) -> void:
+	# Soft atmospheric bands behind the forest.
+	draw_rect(
+		Rect2(cam_x - world_view_width * 1.5, GROUND_Y - BACKGROUND_HEIGHT - 80.0, world_view_width * 3.0, 90.0),
+		Color("#bce87b")
+	)
+	draw_rect(
+		Rect2(cam_x - world_view_width * 1.5, GROUND_Y - 80.0, world_view_width * 3.0, 80.0),
+		Color("#6da94a")
+	)
+
+	# Farthest -> nearest, matching the intended Back -> Far -> Middle stack.
+	_draw_parallax_layer(BACK_TEXTURE, cam_x, BACK_PARALLAX, Color(0.76, 0.86, 0.58, 1.0))
+	_draw_parallax_layer(FAR_TEXTURE, cam_x, FAR_PARALLAX, Color(0.88, 0.96, 0.66, 1.0))
+	_draw_parallax_layer(MID_TEXTURE, cam_x, MID_PARALLAX, Color.WHITE)
+
+	# A proper foreground/soil band makes the play surface read as a world
+	# instead of a floating strip above the dark screen area.
+	draw_rect(
+		Rect2(cam_x - world_view_width * 1.5, GROUND_Y, world_view_width * 3.0, world_view_height * 1.5),
+		Color("#243b2b")
+	)
+	draw_rect(
+		Rect2(cam_x - world_view_width * 1.5, GROUND_Y, world_view_width * 3.0, 7.0),
+		Color("#5f9c49")
+	)
+	draw_line(
+		Vector2(cam_x - world_view_width * 1.5, GROUND_Y + 8.0),
+		Vector2(cam_x + world_view_width * 1.5, GROUND_Y + 8.0),
+		Color("#365b36"),
+		2.0
+	)
+
+	# Lightweight animated atmosphere: deterministic fireflies and drifting
+	# leaves. They are drawn in world space, so they remain stable with camera
+	# movement and add life without spawning dozens of Nodes.
+	for i in range(18):
+		var fi := float(i)
+		var x := cam_x - world_view_width * 0.5 + fposmod(fi * 137.0 + background_time * (8.0 + fmod(fi, 3.0) * 4.0), world_view_width)
+		var y := GROUND_Y - 105.0 - fmod(fi * 41.0 + sin(background_time * 0.7 + fi) * 16.0, 250.0)
+		var pulse := 0.45 + 0.35 * sin(background_time * 2.2 + fi)
+		draw_circle(Vector2(x, y), 2.0, Color(1.0, 0.93, 0.43, pulse))
+
+	for i in range(10):
+		var fi := float(i)
+		var x := cam_x - world_view_width * 0.5 + fposmod(fi * 191.0 + background_time * (14.0 + fi * 0.8), world_view_width)
+		var y := GROUND_Y - 35.0 - fmod(fi * 53.0 + background_time * (7.0 + fi * 0.3), 300.0)
+		var drift := sin(background_time * 1.4 + fi) * 10.0
+		draw_line(Vector2(x, y), Vector2(x + 7.0 + drift, y + 3.0), Color(0.42, 0.72, 0.30, 0.70), 2.0)
+
+func _draw_parallax_layer(texture: Texture2D, cam_x: float, parallax: float, tint: Color) -> void:
 	if texture == null:
 		return
-	var size := texture.get_size()
-	if size.x <= 0.0 or size.y <= 0.0:
+	var source_size := texture.get_size()
+	if source_size.x <= 0.0 or source_size.y <= 0.0:
 		return
 
-	# All layers share exactly the same vertical band. Horizontal repetition is
-	# based on a common world phase, then each layer receives only its parallax
-	# offset. This keeps the artwork compact/overlapping instead of separating it.
-	var world_phase := cam_x * parallax
-	var first_x := floorf((world_phase - size.x) / size.x) * size.x
-	var y := GROUND_Y - size.y
-	var count := int(ceil(3400.0 / size.x)) + 3
-	for i in range(count):
-		var x := first_x + float(i) * size.x
-		draw_texture_rect(texture, Rect2(x, y, size.x, size.y), false)
+	var scale_factor := BACKGROUND_HEIGHT / source_size.y
+	var draw_size := source_size * scale_factor
+	var phase := cam_x * parallax
+	var offset := fposmod(phase, draw_size.x)
+	var first_x := cam_x * (1.0 - parallax) - offset - draw_size.x
+
+	var camera_zoom := Vector2.ONE
+	if is_instance_valid(player) and is_instance_valid(player.camera):
+		camera_zoom = player.camera.zoom
+	var visible_world_width := get_viewport_rect().size.x / maxf(camera_zoom.x, 0.01)
+	var copies := int(ceil(visible_world_width / draw_size.x)) + 4
+
+	for i in range(copies):
+		var x := first_x + float(i) * draw_size.x
+		var rect := Rect2(x, GROUND_Y - BACKGROUND_HEIGHT, draw_size.x, BACKGROUND_HEIGHT)
+		draw_texture_rect(texture, rect, false, tint)
