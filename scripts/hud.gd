@@ -28,13 +28,21 @@ func _build() -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
 
+	var top_panel := PanelContainer.new()
+	top_panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	top_panel.offset_left = 12.0
+	top_panel.offset_top = 8.0
+	top_panel.offset_right = -12.0
+	top_panel.offset_bottom = 92.0
+	top_panel.add_theme_stylebox_override("panel", _box(Color(0.05, 0.10, 0.16, 0.76), 18))
+	root.add_child(top_panel)
+
 	var top := MarginContainer.new()
-	top.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	top.offset_left = 16.0
-	top.offset_top = 10.0
-	top.offset_right = -16.0
-	top.offset_bottom = 92.0
-	root.add_child(top)
+	top.add_theme_constant_override("margin_left", 12)
+	top.add_theme_constant_override("margin_right", 12)
+	top.add_theme_constant_override("margin_top", 6)
+	top.add_theme_constant_override("margin_bottom", 6)
+	top_panel.add_child(top)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	top.add_child(row)
@@ -116,6 +124,7 @@ func _add_control_button(parent: HBoxContainer, text: String, action: String, wi
 	button.button_down.connect(func(): Input.action_press(action))
 	button.button_up.connect(func(): Input.action_release(action))
 	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	parent.add_child(button)
 
 func _make_panel(viewport_size: Vector2, compact: bool) -> PanelContainer:
@@ -151,6 +160,7 @@ func _panel_button(parent: VBoxContainer, text: String, callback: Callable) -> B
 
 func show_pause(value: bool, steps: int, best_steps: int) -> void:
 	if value:
+		_release_controls()
 		resume_button.visible = true
 		title_label.text = "PAUSED"
 		info_label.text = "Steps %d   Best %d" % [steps, best_steps]
@@ -161,6 +171,7 @@ func show_pause(value: bool, steps: int, best_steps: int) -> void:
 		overlay.visible = false
 
 func show_game_over(steps: int, best_steps: int) -> void:
+	_release_controls()
 	resume_button.visible = false
 	_restart_button_reset()
 	title_label.text = "GAME OVER"
@@ -192,6 +203,14 @@ func _restart_button_reset() -> void:
 	restart_confirmed = false
 	if is_instance_valid(restart_button):
 		restart_button.text = "Restart"
+
+func _release_controls() -> void:
+	Input.action_release("move_left")
+	Input.action_release("move_right")
+	Input.action_release("jump")
+
+func _exit_tree() -> void:
+	_release_controls()
 
 func _box(color: Color, radius: int) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
