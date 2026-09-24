@@ -6,8 +6,8 @@ const MAX_DISTANCE: float = 2200.0
 
 static func tier_for_steps(distance_steps: int) -> int:
 	if distance_steps < 300: return 1
-	if distance_steps < 750: return 2
-	if distance_steps < 1400: return 3
+	if distance_steps < 600: return 2
+	if distance_steps < 900: return 3
 	return 4
 
 static func progress(distance_steps: int) -> float:
