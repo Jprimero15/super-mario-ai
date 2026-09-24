@@ -1,8 +1,8 @@
 extends Resource
 class_name MaryouDifficultyCurve
 
-const MAX_SPEED: float = 520.0
-const MAX_DISTANCE: float = 1800.0
+const MAX_SPEED: float = 540.0
+const MAX_DISTANCE: float = 2200.0
 
 static func tier_for_steps(distance_steps: int) -> int:
 	if distance_steps < 300: return 1
@@ -14,13 +14,18 @@ static func progress(distance_steps: int) -> float:
 	return clampf(float(maxi(distance_steps, 0)) / MAX_DISTANCE, 0.0, 1.0)
 
 static func speed_for_steps(distance_steps: int) -> float:
-	return lerpf(300.0, MAX_SPEED, pow(progress(distance_steps), 0.78))
+	return lerpf(300.0, MAX_SPEED, pow(progress(distance_steps), 0.82))
 
 static func hole_chance(distance_steps: int) -> float:
-	return lerpf(0.045, 0.14, progress(distance_steps))
+	return lerpf(0.035, 0.12, progress(distance_steps))
 
 static func enemy_count(distance_steps: int) -> int:
-	return clampi(1 + int(distance_steps / 420.0), 0, 4)
+	return clampi(1 + int(distance_steps / 480.0), 0, 4)
+
+static func obstacle_count(distance_steps: int) -> int:
+	if distance_steps < 350: return 1
+	if distance_steps < 1000: return 2
+	return 3
 
 static func enemy_kind(distance_steps: int, index: int, rng: RandomNumberGenerator = null) -> int:
 	var tier: int = tier_for_steps(distance_steps)
