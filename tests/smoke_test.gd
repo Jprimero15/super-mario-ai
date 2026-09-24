@@ -25,8 +25,8 @@ func _initialize() -> void:
 		if not player.take_damage(1):
 			failures.append("single player damage must register")
 
-	var enemies := Node2D.new()
-	var world := MaryouWorldGenerator.new()
+	var enemies: Node2D = Node2D.new()
+	var world: MaryouWorldGenerator = MaryouWorldGenerator.new()
 	world.setup(enemies)
 	world.run_seed = 12345
 	world._generate_chunk(1, 0)
@@ -60,6 +60,15 @@ func _initialize() -> void:
 			if game.last_milestone != 500:
 				failures.append("milestone did not fire at 500")
 			game.free()
+
+	# Explicitly release every runtime object created by the smoke test before
+	# SceneTree cleanup, preventing physics/rendering RID leaks from generated chunks.
+	if is_instance_valid(world):
+		world.free()
+	if is_instance_valid(enemies):
+		enemies.free()
+	if is_instance_valid(player):
+		player.free()
 
 	if failures.is_empty():
 		print("MARYOU SMOKE TEST: PASS")
