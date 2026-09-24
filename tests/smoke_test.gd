@@ -64,11 +64,11 @@ func _initialize() -> void:
 			game.steps = 299
 			game._check_milestone()
 			if game.last_milestone != 0:
-				failures.append("milestone fired before 500")
+				failures.append("milestone fired before 300")
 			game.steps = 300
 			game._check_milestone()
 			if game.last_milestone != 500:
-				failures.append("milestone did not fire at 500")
+				failures.append("milestone did not fire at 300")
 			game.free()
 
 	# Explicitly release every runtime object created by the smoke test before
