@@ -258,9 +258,9 @@ func show_game_over(steps: int, best_steps: int, new_best: bool = false, run_coi
 	panel.visible = true
 	settings_panel.visible = false
 
-func update_stats(steps: int, coins: int, tier: int, shielded: bool = false, best_steps: int = 0) -> void:
+func update_stats(steps: int, coins: int, tier: int, best_steps: int = 0) -> void:
 	steps_label.text = "STEPS %d" % steps
-	status_label.text = "COINS %d  •  BEST %d" % [coins, best_steps] if not shielded else "COINS %d  •  SHIELD" % coins
+	status_label.text = "COINS %d  •  BEST %d" % [coins, best_steps]
 	tier_label.text = "DEEP FOREST" if tier >= 4 else "TIER %d" % tier
 
 func show_milestone(distance: int) -> void:
