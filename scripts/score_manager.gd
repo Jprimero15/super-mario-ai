@@ -20,7 +20,6 @@ func reset_run() -> void:
 func add_coin() -> void:
 	coins += 1
 	total_coins += 1
-	save_records()
 	AudioManager.play_sfx("coin")
 
 func add_stomp() -> void:
