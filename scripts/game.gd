@@ -74,7 +74,7 @@ func _ready() -> void:
 	world.generate_until(player.position.x, steps)
 	_check_milestone()
 	_wire_enemies()
-	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps), player.shielded, ScoreManager.best_steps)
+	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps), ScoreManager.best_steps)
 	queue_redraw()
 
 func _process(delta: float) -> void:
@@ -93,6 +93,7 @@ func _physics_process(delta: float) -> void:
 	var distance: int = maxi(0, int(player.position.x / GROUND_TILE_SIZE))
 	steps = maxi(steps, distance)
 	ScoreManager.steps = steps
+	_check_milestone()
 	var speed: float = MaryouDifficultyCurve.speed_for_steps(steps)
 	var left: bool = Input.is_action_pressed("move_left")
 	var right: bool = Input.is_action_pressed("move_right")
@@ -183,7 +184,7 @@ func _finish_run(slowdown: float = 1.0) -> void:
 	Engine.time_scale = slowdown
 	if is_instance_valid(player.camera):
 		var tween := create_tween().set_parallel(true)
-		tween.tween_property(player.camera, "zoom", Vector2(0.98, 0.98), 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.tween_property(player.camera, "zoom", Vector2(1.12, 1.12), 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	await get_tree().create_timer(0.14, true, false, true).timeout
 	if token != lifecycle_token or restart_pending:
 		return
