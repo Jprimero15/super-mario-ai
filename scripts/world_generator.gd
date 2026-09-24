@@ -88,11 +88,14 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 		_add_hole_warning(root, hole)
 
 	if chunk_index > 0:
-		_generate_obstacle_pattern(root, rng, distance_steps, chunk_index, occupied, holes, safe_gap_until)
+		_generate_obstacle_pattern(root, rng, distance_steps, chunk_index, start_x, occupied, holes, safe_gap_until)
 
 	# Coins stay on the safest route and are placed in small, readable arcs.
 	var coin_count := rng.randi_range(3, 5)
 	var coin_start := 7 + rng.randi_range(0, 2)
+	var max_coin_index := 18
+	var max_coins_from_start := maxi(0, ((max_coin_index - coin_start) / 3) + 1)
+	coin_count = mini(coin_count, max_coins_from_start)
 	for i in range(coin_count):
 		var coin_x := start_x + float(coin_start + i * 3) * TILE
 		var coin_y := GROUND_Y - float(96 + (i % 3) * 28)
@@ -116,7 +119,7 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 				occupied.append(enemy_rect)
 				break
 
-func _generate_obstacle_pattern(parent: Node2D, rng: RandomNumberGenerator, distance_steps: int, chunk_index: int, occupied: Array[Rect2], holes: Array[Rect2], safe_gap_until: float) -> void:
+func _generate_obstacle_pattern(parent: Node2D, rng: RandomNumberGenerator, distance_steps: int, chunk_index: int, start_x: float, occupied: Array[Rect2], holes: Array[Rect2], safe_gap_until: float) -> void:
 	var obstacle_count := MaryouDifficultyCurve.obstacle_count(distance_steps)
 	var tier := MaryouDifficultyCurve.tier_for_steps(distance_steps)
 	var pattern := rng.randi_range(0, 3)
@@ -132,10 +135,10 @@ func _generate_obstacle_pattern(parent: Node2D, rng: RandomNumberGenerator, dist
 			offset = 1
 		elif pattern == 3 and slot == 2:
 			offset = -1
-		var obstacle_x := start_x_for(parent) + float(slot_index + offset) * TILE
+		var obstacle_x := start_x + float(slot_index + offset) * TILE
 		if obstacle_x <= safe_gap_until + 32.0 or obstacle_x - previous_x < 96.0:
 			obstacle_x = maxf(obstacle_x, previous_x + 96.0)
-		if obstacle_x > start_x_for(parent) + CHUNK_WIDTH - 80.0:
+		if obstacle_x > start_x + CHUNK_WIDTH - 80.0:
 			continue
 
 		var obstacle_index := _choose_obstacle_index(rng, distance_steps, chunk_index, slot, tier)
@@ -147,9 +150,6 @@ func _generate_obstacle_pattern(parent: Node2D, rng: RandomNumberGenerator, dist
 			occupied.append(obstacle_rect)
 			previous_x = obstacle_x
 
-func start_x_for(parent: Node2D) -> float:
-	var index_text := str(parent.name).trim_prefix("Chunk_")
-	return float(index_text.to_int()) * CHUNK_WIDTH
 
 func _choose_obstacle_index(rng: RandomNumberGenerator, distance_steps: int, chunk_index: int, slot: int, tier: int) -> int:
 	if chunk_index % 6 == 0 and slot == 0:
