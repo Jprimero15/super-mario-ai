@@ -35,6 +35,8 @@ var shake_strength := 0.0
 var last_animation := ""
 var was_airborne := false
 var landing_timer := 0.0
+var coin_flash := 0.0
+var coin_burst_power := 0.0
 
 func _ready() -> void:
 	z_index = 10
@@ -68,6 +70,8 @@ func _ready() -> void:
 	add_child(camera)
 
 func tick(delta: float, target_speed: float, left: bool, right: bool, jump_pressed: bool, jump_held: bool) -> void:
+	coin_flash = maxf(0.0, coin_flash - delta)
+	coin_burst_power = maxf(0.0, coin_burst_power - delta * 3.0)
 	hit_invulnerability = maxf(0.0, hit_invulnerability - delta)
 	if shield_time > 0.0:
 		shield_time = maxf(0.0, shield_time - delta)
@@ -196,6 +200,12 @@ func take_damage(amount: int = 1) -> bool:
 	queue_redraw()
 	return true
 
+func coin_burst() -> void:
+	coin_flash = 0.22
+	coin_burst_power = 1.0
+	shake(1.5, 0.05)
+	queue_redraw()
+
 func activate_shield() -> void:
 	shielded = true
 	shield_time = 8.0
@@ -218,3 +228,10 @@ func kill() -> void:
 func _draw() -> void:
 	if shielded:
 		draw_arc(Vector2.ZERO, 34.0, 0.0, TAU, 32, Color(0.35, 0.9, 0.85, 0.75), 3.0)
+	if coin_flash > 0.0:
+		var radius := 24.0 + (0.22 - coin_flash) * 42.0
+		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 20, Color(1.0, 0.86, 0.25, coin_flash / 0.22), 3.0)
+	if landing_timer > 0.0 and was_airborne == false:
+		var impact := clampf(landing_timer / 0.38, 0.0, 1.0)
+		draw_line(Vector2(-22.0, 24.0), Vector2(-38.0, 27.0), Color(1, 1, 1, impact * 0.45), 2.0)
+		draw_line(Vector2(22.0, 24.0), Vector2(38.0, 27.0), Color(1, 1, 1, impact * 0.45), 2.0)
