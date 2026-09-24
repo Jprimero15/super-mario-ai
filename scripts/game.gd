@@ -29,6 +29,7 @@ var run_finishing: bool = false
 var restart_pending: bool = false
 var lifecycle_token: int = 0
 var background_time: float = 0.0
+var run_best_notified := false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -71,7 +72,7 @@ func _ready() -> void:
 
 	world.generate_until(player.position.x, steps)
 	_wire_enemies()
-	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps), player.shielded)
+	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps), player.shielded, ScoreManager.best_steps)
 	queue_redraw()
 
 func _process(delta: float) -> void:
@@ -123,12 +124,13 @@ func _wire_enemies() -> void:
 
 func _on_coin() -> void:
 	ScoreManager.add_coin()
+	if is_instance_valid(player):
+		player.coin_burst()
 
 func _on_hazard(_player: MaryouPlayer) -> void:
 	if restart_pending or run_finishing:
 		return
-	_juice(0.04, 0.94, lifecycle_token)
-	_finish_run()
+	_finish_run(0.86)
 
 func _on_checkpoint_reached(_position: Vector2) -> void:
 	if is_instance_valid(hud):
@@ -151,7 +153,7 @@ func _take_damage() -> void:
 	hit_lock = true
 	AudioManager.play_sfx("hit")
 	if player.take_damage(1):
-		_finish_run()
+		_finish_run(0.90)
 	else:
 		_juice(0.05, 0.9, lifecycle_token)
 	var token := lifecycle_token
@@ -160,7 +162,7 @@ func _take_damage() -> void:
 		return
 	hit_lock = false
 
-func _finish_run() -> void:
+func _finish_run(slowdown: float = 1.0) -> void:
 	if restart_pending or run_finishing or not is_instance_valid(player) or player.dead or not ScoreManager.run_active:
 		return
 	run_finishing = true
@@ -168,15 +170,16 @@ func _finish_run() -> void:
 	ScoreManager.finish_run()
 	player.kill()
 	get_tree().paused = false
-	Engine.time_scale = 1.0
+	Engine.time_scale = slowdown
 	if is_instance_valid(player.camera):
 		var tween := create_tween().set_parallel(true)
 		tween.tween_property(player.camera, "zoom", Vector2(0.98, 0.98), 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	await get_tree().create_timer(0.14, true, false, true).timeout
 	if token != lifecycle_token or restart_pending:
 		return
+	Engine.time_scale = 1.0
 	if is_instance_valid(hud):
-		hud.show_game_over(ScoreManager.steps, ScoreManager.best_steps)
+		hud.show_game_over(ScoreManager.steps, ScoreManager.best_steps, ScoreManager.new_best, ScoreManager.coins, ScoreManager.total_coins)
 
 func _toggle_pause() -> void:
 	if restart_pending or run_finishing or not is_instance_valid(player) or player.dead:
@@ -238,9 +241,11 @@ func _draw() -> void:
 	)
 
 	# Soft atmospheric bands behind the forest.
+	var tier := MaryouDifficultyCurve.tier_for_steps(ScoreManager.steps)
+	var sky_color := Color("#bce87b") if tier < 4 else Color("#a6c66c")
 	draw_rect(
 		Rect2(cam_x - world_view_width * 1.5, GROUND_Y - BACKGROUND_HEIGHT - 80.0, world_view_width * 3.0, 90.0),
-		Color("#bce87b")
+		sky_color
 	)
 	draw_rect(
 		Rect2(cam_x - world_view_width * 1.5, GROUND_Y - 80.0, world_view_width * 3.0, 80.0),
@@ -251,6 +256,16 @@ func _draw() -> void:
 	_draw_parallax_layer(BACK_TEXTURE, cam_x, BACK_PARALLAX, Color(0.76, 0.86, 0.58, 1.0))
 	_draw_parallax_layer(FAR_TEXTURE, cam_x, FAR_PARALLAX, Color(0.88, 0.96, 0.66, 1.0))
 	_draw_parallax_layer(MID_TEXTURE, cam_x, MID_PARALLAX, Color.WHITE)
+
+	# Speed-sensitive atmosphere makes the increasing pace visible without extra nodes.
+	if is_instance_valid(player):
+		var speed_ratio := clampf((absf(player.velocity.x) - 300.0) / 240.0, 0.0, 1.0)
+		if speed_ratio > 0.15:
+			for i in range(6):
+				var fi := float(i)
+				var sx := cam_x + 300.0 + fposmod(fi * 97.0 + background_time * (110.0 + speed_ratio * 180.0), 420.0)
+				var sy := GROUND_Y - 90.0 - fi * 36.0
+				draw_line(Vector2(sx, sy), Vector2(sx - (18.0 + speed_ratio * 28.0), sy), Color(1.0, 1.0, 1.0, 0.12 + speed_ratio * 0.10), 2.0)
 
 	# A proper foreground/soil band makes the play surface read as a world
 	# instead of a floating strip above the dark screen area.
