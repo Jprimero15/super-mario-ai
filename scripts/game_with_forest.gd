@@ -1,4 +1,4 @@
-extends "res://scripts/game.gd"
+extends MaryouGame
 
 func _draw() -> void:
 	# Keep the canonical background/parallax renderer from game.gd so the
