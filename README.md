@@ -73,7 +73,7 @@ The HUD is generated from `scripts/hud.gd` and includes:
 
 - Steps/distance counter.
 - Coin counter.
-- HP/shield state.
+- HP state.
 - Difficulty tier.
 - Pause button.
 - Large left/right touch controls.
@@ -161,7 +161,7 @@ The progression is intentionally capped so difficulty does not grow without boun
 Current audio is procedural:
 
 - 8-second arcade-style background loop.
-- Jump, coin, stomp, hit, shield, game-over, and UI tones.
+- Jump, coin, stomp, hit, game-over, and UI tones.
 - Music/SFX volume settings are persisted in `user://settings.cfg`.
 
 The music restarts a completed WAV stream rather than relying on a WAV loop boundary. This is intended to avoid platform-specific loop-boundary problems.
@@ -174,11 +174,11 @@ Original or CC0/royalty-free audio can later be added under `res://audio/` witho
 - **Renderer:** GL Compatibility
 - **Orientation:** Landscape
 - **Minimum Android SDK:** API 24
-- **Target Android SDK:** API 35
+- **Target Android SDK:** API 36
 - **Android NDK:** 28.1.13356709 in CI
 - **Build tools:** 35.0.1
 - **Java:** OpenJDK 17
-- **Architectures:** `armeabi-v7a`, `arm64-v8a`
+- **Architectures:** `arm64-v8a`
 
 The project uses a 1280×720 logical viewport with `canvas_items` stretch mode.
 
@@ -242,6 +242,8 @@ The recent background/parallax pass fixed the previous fixed-width background be
 The remaining areas for future work are primarily polish and gameplay-depth improvements rather than replacing the current rendering architecture:
 
 - More visual variety between procedural chunks.
+- Breakable crates reward successful stomps with a coin.
+- Enemy stomps reward one run coin.
 - More background decoration as optional low-cost effects.
 - Additional automated gameplay tests beyond the current smoke test.
 - A custom licensed game font.
