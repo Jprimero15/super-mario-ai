@@ -67,7 +67,7 @@ func _initialize() -> void:
 				failures.append("milestone fired before 300")
 			game.steps = 300
 			game._check_milestone()
-			if game.last_milestone != 500:
+			if game.last_milestone != 300:
 				failures.append("milestone did not fire at 300")
 			game.free()
 
