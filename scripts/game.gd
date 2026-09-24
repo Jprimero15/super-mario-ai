@@ -61,7 +61,7 @@ func _ready() -> void:
 	if spawning_at_checkpoint:
 		player.position = checkpoint_spawn + Vector2(-12.0, -38.0)
 		steps = maxi(0, int(player.position.x / GROUND_TILE_SIZE))
-		ScoreManager.steps = steps
+		get_node("/root/ScoreManager").steps = steps
 	add_child(player)
 
 	hud = HUDScene.new()
@@ -74,7 +74,7 @@ func _ready() -> void:
 	world.generate_until(player.position.x, steps)
 	_check_milestone()
 	_wire_enemies()
-	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps), ScoreManager.best_steps)
+	hud.update_stats(steps, get_node("/root/ScoreManager").coins, MaryouDifficultyCurve.tier_for_steps(steps), get_node("/root/ScoreManager").best_steps)
 	queue_redraw()
 
 func _process(delta: float) -> void:
@@ -92,7 +92,7 @@ func _physics_process(delta: float) -> void:
 
 	var distance: int = maxi(0, int(player.position.x / GROUND_TILE_SIZE))
 	steps = maxi(steps, distance)
-	ScoreManager.steps = steps
+	get_node("/root/ScoreManager").steps = steps
 	_check_milestone()
 	var speed: float = MaryouDifficultyCurve.speed_for_steps(steps)
 	var left: bool = Input.is_action_pressed("move_left")
@@ -100,7 +100,7 @@ func _physics_process(delta: float) -> void:
 	var jump_held: bool = Input.is_action_pressed("jump")
 	var jump_pressed: bool = Input.is_action_just_pressed("jump")
 	if jump_pressed:
-		AudioManager.play_sfx("jump")
+		get_node("/root/AudioManager").play_sfx("jump")
 	player.tick(delta, speed, left, right, jump_pressed, jump_held)
 
 	world.generate_until(player.position.x, steps)
@@ -112,7 +112,7 @@ func _physics_process(delta: float) -> void:
 
 	if player.position.y > WORLD_HEIGHT + 80.0:
 		_finish_run()
-	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps), ScoreManager.best_steps)
+	hud.update_stats(steps, get_node("/root/ScoreManager").coins, MaryouDifficultyCurve.tier_for_steps(steps), get_node("/root/ScoreManager").best_steps)
 
 func _wire_enemies() -> void:
 	for child in enemies.get_children():
@@ -129,12 +129,12 @@ func _check_milestone() -> void:
 	var milestone := (steps / 500) * 500
 	if milestone >= 500 and milestone > last_milestone:
 		last_milestone = milestone
-		AudioManager.play_sfx("milestone")
+		get_node("/root/AudioManager").play_sfx("milestone")
 		if is_instance_valid(hud):
 			hud.show_milestone(milestone)
 
 func _on_coin() -> void:
-	ScoreManager.add_coin()
+	get_node("/root/ScoreManager").add_coin()
 	if is_instance_valid(player):
 		player.coin_burst()
 
@@ -153,16 +153,16 @@ func _on_enemy_contact(_enemy: MaryouEnemy) -> void:
 func _on_enemy_stomp(_enemy: MaryouEnemy) -> void:
 	if restart_pending or run_finishing:
 		return
-	ScoreManager.add_stomp()
+	get_node("/root/ScoreManager").add_stomp()
 	if is_instance_valid(player):
 		player.shake(5.0, 0.10)
 	_juice(0.06, 0.88, lifecycle_token)
 
 func _take_damage() -> void:
-	if restart_pending or run_finishing or hit_lock or not ScoreManager.run_active or not is_instance_valid(player) or player.dead:
+	if restart_pending or run_finishing or hit_lock or not get_node("/root/ScoreManager").run_active or not is_instance_valid(player) or player.dead:
 		return
 	hit_lock = true
-	AudioManager.play_sfx("hit")
+	get_node("/root/AudioManager").play_sfx("hit")
 	if player.take_damage(1):
 		_finish_run(0.90)
 	else:
@@ -174,11 +174,11 @@ func _take_damage() -> void:
 	hit_lock = false
 
 func _finish_run(slowdown: float = 1.0) -> void:
-	if restart_pending or run_finishing or not is_instance_valid(player) or player.dead or not ScoreManager.run_active:
+	if restart_pending or run_finishing or not is_instance_valid(player) or player.dead or not get_node("/root/ScoreManager").run_active:
 		return
 	run_finishing = true
 	var token := lifecycle_token
-	ScoreManager.finish_run()
+	get_node("/root/ScoreManager").finish_run()
 	player.kill()
 	get_tree().paused = false
 	Engine.time_scale = slowdown
@@ -190,7 +190,7 @@ func _finish_run(slowdown: float = 1.0) -> void:
 		return
 	Engine.time_scale = 1.0
 	if is_instance_valid(hud):
-		hud.show_game_over(ScoreManager.steps, ScoreManager.best_steps, ScoreManager.new_best, ScoreManager.coins, ScoreManager.total_coins)
+		hud.show_game_over(get_node("/root/ScoreManager").steps, get_node("/root/ScoreManager").best_steps, get_node("/root/ScoreManager").new_best, get_node("/root/ScoreManager").coins, get_node("/root/ScoreManager").total_coins)
 
 func _toggle_pause() -> void:
 	if restart_pending or run_finishing or not is_instance_valid(player) or player.dead:
@@ -198,7 +198,7 @@ func _toggle_pause() -> void:
 	var value: bool = not get_tree().paused
 	get_tree().paused = value
 	if is_instance_valid(hud):
-		hud.show_pause(value, ScoreManager.steps, ScoreManager.best_steps)
+		hud.show_pause(value, get_node("/root/ScoreManager").steps, get_node("/root/ScoreManager").best_steps)
 
 func _restart() -> void:
 	if restart_pending:
@@ -252,7 +252,7 @@ func _draw() -> void:
 	)
 
 	# Soft atmospheric bands behind the forest.
-	var tier := MaryouDifficultyCurve.tier_for_steps(ScoreManager.steps)
+	var tier := MaryouDifficultyCurve.tier_for_steps(get_node("/root/ScoreManager").steps)
 	var sky_color := Color("#bce87b") if tier < 4 else Color("#a6c66c")
 	draw_rect(
 		Rect2(cam_x - world_view_width * 1.5, GROUND_Y - BACKGROUND_HEIGHT - 80.0, world_view_width * 3.0, 90.0),
