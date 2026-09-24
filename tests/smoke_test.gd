@@ -49,7 +49,8 @@ func _initialize() -> void:
 		if game == null:
 			failures.append("game creation")
 		else:
-			root.add_child(game)
+			# Keep the smoke test out of the active scene tree so game._ready()
+			# does not start a full gameplay run or require runtime autoload nodes.
 			game.steps = 499
 			game._check_milestone()
 			if game.last_milestone != 0:
@@ -58,6 +59,7 @@ func _initialize() -> void:
 			game._check_milestone()
 			if game.last_milestone != 500:
 				failures.append("milestone did not fire at 500")
+			game.free()
 
 	if failures.is_empty():
 		print("MARYOU SMOKE TEST: PASS")
