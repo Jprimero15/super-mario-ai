@@ -40,9 +40,9 @@ func _ready() -> void:
 	if OS.has_feature("android"):
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR_LANDSCAPE)
 
-	var checkpoint_spawn := GameState.consume_checkpoint_respawn()
+	var checkpoint_spawn: Vector2 = get_node("/root/GameState").consume_checkpoint_respawn()
 	var spawning_at_checkpoint := checkpoint_spawn != Vector2.INF
-	ScoreManager.reset_run()
+	get_node("/root/ScoreManager").reset_run()
 
 	enemies = Node2D.new()
 	enemies.name = "Enemies"
@@ -209,7 +209,7 @@ func _restart() -> void:
 	run_finishing = true
 	Engine.time_scale = 1.0
 	get_tree().paused = false
-	GameState.request_checkpoint_respawn()
+	get_node("/root/GameState").request_checkpoint_respawn()
 	call_deferred("_reload_scene_safely")
 
 func _reload_scene_safely() -> void:
@@ -220,7 +220,7 @@ func _reload_scene_safely() -> void:
 func _back_from_overlay() -> void:
 	Engine.time_scale = 1.0
 	get_tree().paused = false
-	GameState.clear_checkpoint()
+	get_node("/root/GameState").clear_checkpoint()
 	get_tree().quit()
 
 func _juice(duration: float, time_scale: float, token: int) -> void:
