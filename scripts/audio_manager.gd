@@ -7,6 +7,7 @@ const SFX_BUS := "SFX"
 const MUSIC_RATE := 44100
 var music_volume := 0.8
 var sfx_volume := 0.9
+var vibration_enabled := true
 var music_player: AudioStreamPlayer
 
 func _ready() -> void:
@@ -28,12 +29,22 @@ func set_music_volume(value: float) -> void:
 	_apply_music()
 	_save_settings()
 
+func set_vibration_enabled(value: bool) -> void:
+	vibration_enabled = value
+	_save_settings()
+
+func vibrate(duration_ms: int = 25, amplitude: float = 0.35) -> void:
+	if vibration_enabled and OS.has_feature("android"):
+		Input.vibrate_handheld(duration_ms, amplitude)
+
 func set_sfx_volume(value: float) -> void:
 	sfx_volume = clampf(value, 0.0, 1.0)
 	_apply_sfx()
 	_save_settings()
 
 func play_sfx(type: String) -> void:
+	if type == "coin" or type == "stomp" or type == "hit" or type == "game_over":
+		vibrate(18 if type == "coin" else 32 if type == "stomp" else 55 if type == "hit" else 80, 0.28 if type == "coin" else 0.45)
 	var player := AudioStreamPlayer.new()
 	player.bus = SFX_BUS
 	player.stream = _tone_stream(type)
@@ -128,9 +139,11 @@ func _load_settings() -> void:
 	if cfg.load(SETTINGS_PATH) != OK: return
 	music_volume = clampf(float(cfg.get_value("audio", "music", 0.8)), 0.0, 1.0)
 	sfx_volume = clampf(float(cfg.get_value("audio", "sfx", 0.9)), 0.0, 1.0)
+	vibration_enabled = bool(cfg.get_value("audio", "vibration", true))
 
 func _save_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("audio", "music", music_volume)
 	cfg.set_value("audio", "sfx", sfx_volume)
+	cfg.set_value("audio", "vibration", vibration_enabled)
 	if cfg.save(SETTINGS_PATH) != OK: push_warning("Could not save audio settings")
