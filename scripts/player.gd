@@ -21,8 +21,6 @@ const SPRITE_FRAMES := preload("res://assets/sprites/maryou_frames.tres")
 const GAME_ZOOM := Vector2(1.20, 1.20)
 
 var dead := false
-var shielded := false
-var shield_time := 0.0
 var hit_invulnerability := 0.0
 var coyote_timer := 0.0
 var jump_buffer_timer := 0.0
@@ -73,10 +71,6 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump_press
 	coin_flash = maxf(0.0, coin_flash - delta)
 	coin_burst_power = maxf(0.0, coin_burst_power - delta * 3.0)
 	hit_invulnerability = maxf(0.0, hit_invulnerability - delta)
-	if shield_time > 0.0:
-		shield_time = maxf(0.0, shield_time - delta)
-		if shield_time == 0.0:
-			shielded = false
 
 	if shake_time > 0.0:
 		shake_time = maxf(0.0, shake_time - delta)
@@ -181,17 +175,6 @@ func _set_animation(name: String, force_restart: bool = false) -> void:
 func take_damage(amount: int = 1) -> bool:
 	if amount <= 0 or dead or hit_invulnerability > 0.0:
 		return false
-	if shielded:
-		shielded = false
-		shield_time = 0.0
-		hit_invulnerability = HIT_INVULNERABILITY
-		velocity.y = -300.0
-		squash = 0.82
-		shake(4.0, 0.12)
-		_set_animation("hurt", true)
-		queue_redraw()
-		return false
-
 	hit_invulnerability = HIT_INVULNERABILITY
 	squash = 0.82
 	velocity.y = minf(velocity.y, -240.0)
@@ -204,11 +187,6 @@ func coin_burst() -> void:
 	coin_flash = 0.22
 	coin_burst_power = 1.0
 	shake(1.5, 0.05)
-	queue_redraw()
-
-func activate_shield() -> void:
-	shielded = true
-	shield_time = 8.0
 	queue_redraw()
 
 func shake(strength: float, duration: float) -> void:
@@ -226,8 +204,6 @@ func kill() -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	if shielded:
-		draw_arc(Vector2.ZERO, 34.0, 0.0, TAU, 32, Color(0.35, 0.9, 0.85, 0.75), 3.0)
 	if coin_flash > 0.0:
 		var radius := 24.0 + (0.22 - coin_flash) * 42.0
 		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 20, Color(1.0, 0.86, 0.25, coin_flash / 0.22), 3.0)
