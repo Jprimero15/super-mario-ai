@@ -30,7 +30,9 @@ var background_time: float = 0.0
 var last_milestone := 0
 var last_progress_x: float = 0.0
 var stuck_timer: float = 0.0
-const STUCK_TIMEOUT: float = 0.55
+var run_time: float = 0.0
+const STUCK_TIMEOUT: float = 1.25
+const START_GRACE_TIME: float = 1.5
 const CAMERA_FORWARD_OFFSET: float = 250.0
 
 func _ready() -> void:
@@ -92,6 +94,7 @@ func _physics_process(delta: float) -> void:
 		_toggle_pause()
 		return
 
+	run_time += delta
 	var distance: int = maxi(0, int(player.position.x / GROUND_TILE_SIZE))
 	steps = maxi(steps, distance)
 	get_node("/root/ScoreManager").steps = steps
@@ -108,17 +111,14 @@ func _physics_process(delta: float) -> void:
 	if player.position.x > last_progress_x + 1.0:
 		last_progress_x = player.position.x
 		stuck_timer = 0.0
-	else:
+	elif run_time > START_GRACE_TIME:
 		stuck_timer += delta
-	if stuck_timer >= STUCK_TIMEOUT:
+	if run_time > START_GRACE_TIME and stuck_timer >= STUCK_TIMEOUT:
 		_finish_run(0.90)
 		return
 	if is_instance_valid(player.camera):
 		var camera_target_x := maxf(player.position.x + CAMERA_FORWARD_OFFSET, player.camera.global_position.x + speed * delta)
 		player.camera.global_position.x = camera_target_x
-		if player.position.x < player.camera.global_position.x - 310.0:
-			_finish_run(0.90)
-			return
 
 	world.generate_until(player.position.x, steps)
 	_wire_enemies()
