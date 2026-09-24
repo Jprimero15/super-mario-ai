@@ -144,7 +144,7 @@ func _wire_enemies() -> void:
 
 func _check_milestone() -> void:
 	var milestone := (steps / 300) * 300
-	if milestone >= 500 and milestone > last_milestone:
+	if milestone >= 300 and milestone > last_milestone:
 		last_milestone = milestone
 		if is_inside_tree():
 			var audio_manager := get_node_or_null("/root/AudioManager")
@@ -262,7 +262,7 @@ func _draw() -> void:
 	elif is_instance_valid(player):
 		cam_x = player.global_position.x
 
- 	var world_view_width := get_viewport_rect().size.x / maxf(camera_zoom.x, 0.01)
+	var world_view_width := get_viewport_rect().size.x / maxf(camera_zoom.x, 0.01)
 	var world_view_height := get_viewport_rect().size.y / maxf(camera_zoom.y, 0.01)
 
 	# Layered sky: brighter overhead, softer horizon, and a clean forest glow.
