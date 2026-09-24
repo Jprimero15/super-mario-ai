@@ -41,20 +41,23 @@ func _initialize() -> void:
 					break
 
 	# Milestone logic is tested directly so the smoke test does not construct a full game scene.
-	var game_script := load("res://scripts/game.gd")
+	var game_script: GDScript = load("res://scripts/game.gd") as GDScript
 	if game_script == null:
 		failures.append("game script load")
 	else:
-		var game := game_script.new()
-		root.add_child(game)
-		game.steps = 499
-		game._check_milestone()
-		if game.last_milestone != 0:
-			failures.append("milestone fired before 500")
-		game.steps = 500
-		game._check_milestone()
-		if game.last_milestone != 500:
-			failures.append("milestone did not fire at 500")
+		var game: MaryouGame = game_script.new() as MaryouGame
+		if game == null:
+			failures.append("game creation")
+		else:
+			root.add_child(game)
+			game.steps = 499
+			game._check_milestone()
+			if game.last_milestone != 0:
+				failures.append("milestone fired before 500")
+			game.steps = 500
+			game._check_milestone()
+			if game.last_milestone != 500:
+				failures.append("milestone did not fire at 500")
 
 	if failures.is_empty():
 		print("MARYOU SMOKE TEST: PASS")
