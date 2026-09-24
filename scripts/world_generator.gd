@@ -46,7 +46,8 @@ func generate_until(player_x: float, distance_steps: int) -> void:
 	_prune(player_x)
 
 func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
-	if active_chunks.has(chunk_index): return
+	if active_chunks.has(chunk_index):
+		return
 	var root := ChunkScript.new()
 	root.name = "Chunk_%d" % chunk_index
 	add_child(root)
@@ -60,14 +61,17 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 	var hole_chance := MaryouDifficultyCurve.hole_chance(distance_steps)
 	var safe_gap_until := start_x + 300.0
 
+	# Gaps are deliberately separated so a jump always has a readable landing
+	# zone before the next major decision.
 	for i in range(20):
 		var x := start_x + float(i) * TILE
-		if x < safe_gap_until: continue
-		if i > 7 and i < 19 and rng.randf() < hole_chance:
+		if x < safe_gap_until:
+			continue
+		if i > 8 and i < 19 and rng.randf() < hole_chance:
 			var width := float(rng.randi_range(32, 64))
 			var hole := Rect2(x, GROUND_Y, width, TILE)
 			holes.append(hole)
-			safe_gap_until = hole.end.x + 96.0
+			safe_gap_until = hole.end.x + 128.0
 
 	for i in range(20):
 		var tile := Rect2(start_x + float(i) * TILE, GROUND_Y, TILE, TILE)
@@ -84,36 +88,27 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 		_add_hole_warning(root, hole)
 
 	if chunk_index > 0:
-		var obstacle_count := 1
-		if distance_steps >= 350: obstacle_count = 2
-		if distance_steps >= 1000: obstacle_count = 3
-		for obstacle_slot in range(obstacle_count):
-			var obstacle_index := _choose_obstacle_index(rng, distance_steps, chunk_index, obstacle_slot)
-			var obstacle_scene: PackedScene = OBSTACLE_SCENES[obstacle_index]
-			for attempt in range(10):
-				var obstacle_x := start_x + float(rng.randi_range(8, 18)) * TILE
-				var obstacle_y := GROUND_Y - 32.0
-				if obstacle_index in [0, 2, 3, 4, 5, 7, 9, 11, 13]:
-					obstacle_y = GROUND_Y - 34.0
-				var obstacle_rect := Rect2(obstacle_x - 28.0, obstacle_y - 32.0, 56.0, 64.0)
-				if _safe(obstacle_rect, occupied, holes, 36.0) and obstacle_x > safe_gap_until:
-					_add_obstacle(root, obstacle_scene, Vector2(obstacle_x, obstacle_y), obstacle_index)
-					occupied.append(obstacle_rect)
-					break
+		_generate_obstacle_pattern(root, rng, distance_steps, chunk_index, occupied, holes, safe_gap_until)
 
-	var coin_count := rng.randi_range(2, 4)
+	# Coins stay on the safest route and are placed in small, readable arcs.
+	var coin_count := rng.randi_range(3, 5)
+	var coin_start := 7 + rng.randi_range(0, 2)
 	for i in range(coin_count):
-		var coin_pos := Vector2(start_x + float(rng.randi_range(7, 18)) * TILE, GROUND_Y - float(rng.randi_range(92, 190)))
-		if _safe(Rect2(coin_pos - Vector2(15, 15), Vector2(30, 30)), occupied, holes, 10.0):
+		var coin_x := start_x + float(coin_start + i * 3) * TILE
+		var coin_y := GROUND_Y - float(96 + (i % 3) * 28)
+		var coin_pos := Vector2(coin_x, coin_y)
+		if _safe(Rect2(coin_pos - Vector2(15, 15), Vector2(30, 30)), occupied, holes, 12.0):
 			_add_coin(root, coin_pos)
 
+	# Enemies are spaced away from holes and other challenge objects.
 	var count := MaryouDifficultyCurve.enemy_count(distance_steps)
-	if chunk_index == 0: count = 0
+	if chunk_index == 0:
+		count = 0
 	for i in range(count):
-		for attempt in range(8):
+		for attempt in range(10):
 			var enemy_x := start_x + float(rng.randi_range(11, 18)) * TILE
 			var enemy_rect := Rect2(enemy_x - 18.0, GROUND_Y - 58.0, 36.0, 58.0)
-			if _safe(enemy_rect, occupied, holes, 48.0):
+			if _safe(enemy_rect, occupied, holes, 52.0) and enemy_x > safe_gap_until + 32.0:
 				var enemy := EnemyScript.new()
 				enemy.position = Vector2(enemy_x, GROUND_Y - 40.0)
 				enemy.setup(MaryouDifficultyCurve.enemy_kind(distance_steps, i, rng))
@@ -121,17 +116,54 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 				occupied.append(enemy_rect)
 				break
 
-func _choose_obstacle_index(rng: RandomNumberGenerator, distance_steps: int, chunk_index: int, slot: int) -> int:
+func _generate_obstacle_pattern(parent: Node2D, rng: RandomNumberGenerator, distance_steps: int, chunk_index: int, occupied: Array[Rect2], holes: Array[Rect2], safe_gap_until: float) -> void:
+	var obstacle_count := MaryouDifficultyCurve.obstacle_count(distance_steps)
+	var tier := MaryouDifficultyCurve.tier_for_steps(distance_steps)
+	var pattern := rng.randi_range(0, 3)
+	var slots := [9, 13, 17]
+	var previous_x := safe_gap_until - 128.0
+
+	for slot in range(obstacle_count):
+		var slot_index: int = slots[slot]
+		var offset := 0
+		if pattern == 1 and slot == 1:
+			offset = -1
+		elif pattern == 2 and slot == 0:
+			offset = 1
+		elif pattern == 3 and slot == 2:
+			offset = -1
+		var obstacle_x := start_x_for(parent) + float(slot_index + offset) * TILE
+		if obstacle_x <= safe_gap_until + 32.0 or obstacle_x - previous_x < 96.0:
+			obstacle_x = maxf(obstacle_x, previous_x + 96.0)
+		if obstacle_x > start_x_for(parent) + CHUNK_WIDTH - 80.0:
+			continue
+
+		var obstacle_index := _choose_obstacle_index(rng, distance_steps, chunk_index, slot, tier)
+		var obstacle_scene: PackedScene = OBSTACLE_SCENES[obstacle_index]
+		var obstacle_y := GROUND_Y - 34.0
+		var obstacle_rect := Rect2(obstacle_x - 28.0, obstacle_y - 32.0, 56.0, 64.0)
+		if _safe(obstacle_rect, occupied, holes, 40.0):
+			_add_obstacle(parent, obstacle_scene, Vector2(obstacle_x, obstacle_y), obstacle_index)
+			occupied.append(obstacle_rect)
+			previous_x = obstacle_x
+
+func start_x_for(parent: Node2D) -> float:
+	var index_text := str(parent.name).trim_prefix("Chunk_")
+	return float(index_text.to_int()) * CHUNK_WIDTH
+
+func _choose_obstacle_index(rng: RandomNumberGenerator, distance_steps: int, chunk_index: int, slot: int, tier: int) -> int:
 	if chunk_index % 6 == 0 and slot == 0:
 		return 13
-	var tier := MaryouDifficultyCurve.tier_for_steps(distance_steps)
 	var pool: Array[int] = [0, 1, 2, 3, 4, 5, 7, 11, 12]
 	if tier >= 2:
 		pool.append_array([6, 8, 9])
 	if tier >= 3:
 		pool.append(10)
-	var index := pool[rng.randi_range(0, pool.size() - 1)]
-	return index
+	# Later sections favor combinations that require attention without
+	# introducing lethal objects too early.
+	if tier >= 4 and slot == 2 and rng.randf() < 0.35:
+		return [5, 6, 9, 10][rng.randi_range(0, 3)]
+	return pool[rng.randi_range(0, pool.size() - 1)]
 
 func _add_obstacle(parent: Node2D, scene: PackedScene, position: Vector2, index: int) -> void:
 	var obstacle := scene.instantiate()
@@ -162,8 +194,6 @@ func _add_hole_warning(parent: Node2D, hole: Rect2) -> void:
 	sprite.region_enabled = true
 	sprite.region_rect = Rect2(0.0, 128.0, 64.0, 64.0)
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	# Align the hole visual with the actual 32px ground tile instead of
-	# floating 18px above the land surface.
 	sprite.position = Vector2(hole.position.x + hole.size.x * 0.5, GROUND_Y + TILE * 0.5)
 	sprite.scale = Vector2(hole.size.x / 64.0, 0.72)
 	sprite.z_index = 1
@@ -201,17 +231,20 @@ func _add_coin(parent: Node2D, position: Vector2) -> void:
 func _safe(rect: Rect2, occupied: Array[Rect2], holes: Array[Rect2], padding: float) -> bool:
 	var expanded := rect.grow(padding)
 	for hole in holes:
-		if expanded.intersects(hole): return false
+		if expanded.intersects(hole):
+			return false
 	for other in occupied:
-		if expanded.intersects(other): return false
+		if expanded.intersects(other):
+			return false
 	return true
 
 func _prune(player_x: float) -> void:
-	var prune_before := player_x - CHUNK_WIDTH * 5.0
+	var prune_before := player_x - CHUNK_WIDTH * 4.0
 	for key in active_chunks.keys().duplicate():
 		var root: Node = active_chunks[key]
 		if is_instance_valid(root) and float(key) * CHUNK_WIDTH + CHUNK_WIDTH < prune_before:
 			root.queue_free()
 			active_chunks.erase(key)
 	for child in enemy_root.get_children():
-		if is_instance_valid(child) and child.position.x < prune_before: child.queue_free()
+		if is_instance_valid(child) and child.position.x < prune_before:
+			child.queue_free()
