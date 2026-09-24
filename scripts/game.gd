@@ -1,9 +1,6 @@
 extends Node2D
 class_name MaryouGame
 
-const PlayerScene = preload("res://scripts/player.gd")
-const WorldScene = preload("res://scripts/world_generator.gd")
-const HUDScene = preload("res://scripts/hud.gd")
 const TILES := preload("res://assets/world/tiles.svg")
 const FAR_TEXTURE := preload("res://assets/world/parallax/far.png")
 const MID_TEXTURE := preload("res://assets/world/parallax/middle.png")
@@ -47,7 +44,7 @@ func _ready() -> void:
 	enemies = Node2D.new()
 	enemies.name = "Enemies"
 	add_child(enemies)
-	world = WorldScene.new()
+	world = MaryouWorldGenerator.new()
 	world.name = "WorldGenerator"
 	add_child(world)
 	world.setup(enemies)
@@ -55,7 +52,7 @@ func _ready() -> void:
 	world.hazard_hit.connect(_on_hazard)
 	world.checkpoint_reached.connect(_on_checkpoint_reached)
 
-	player = PlayerScene.new()
+	player = MaryouPlayer.new()
 	player.name = "Player"
 	player.position = Vector2(180, GROUND_Y - 30.0)
 	if spawning_at_checkpoint:
@@ -64,7 +61,7 @@ func _ready() -> void:
 		get_node("/root/ScoreManager").steps = steps
 	add_child(player)
 
-	hud = HUDScene.new()
+	hud = MaryouHUD.new()
 	hud.name = "HUD"
 	hud.pause_pressed.connect(_toggle_pause)
 	hud.restart_pressed.connect(_restart)
