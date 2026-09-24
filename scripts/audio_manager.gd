@@ -53,9 +53,9 @@ func play_sfx(type: String) -> void:
 	player.play()
 
 func _tone_stream(type: String) -> AudioStreamWAV:
-	var frequencies := {"jump": 520.0, "coin": 880.0, "stomp": 220.0, "hit": 120.0, "shield": 660.0, "game_over": 90.0, "ui": 440.0}
+	var frequencies := {"jump": 520.0, "coin": 880.0, "stomp": 220.0, "hit": 120.0, "shield": 660.0, "game_over": 90.0, "ui": 440.0, "milestone": 740.0}
 	var frequency: float = frequencies.get(type, 440.0)
-	var length := 0.10 if type != "game_over" else 0.35
+	var length := 0.10 if type != "game_over" and type != "milestone" else 0.35 if type == "game_over" else 0.18
 	var samples := int(length * MUSIC_RATE)
 	var data := PackedByteArray()
 	data.resize(samples * 2)
