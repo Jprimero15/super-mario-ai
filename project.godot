@@ -33,7 +33,5 @@ textures/vram_compression/import_etc2_astc=true
 common/enable_pause_aware_picking=true
 
 [input]
-move_left={"deadzone":0.4,"events":[Object(InputEventKey,"physical_keycode":65),Object(InputEventKey,"physical_keycode":4194311)]}
-move_right={"deadzone":0.4,"events":[Object(InputEventKey,"physical_keycode":68),Object(InputEventKey,"physical_keycode":4194313)]}
 jump={"deadzone":0.4,"events":[Object(InputEventKey,"physical_keycode":32)]}
 pause={"deadzone":0.4,"events":[Object(InputEventKey,"physical_keycode":4194305)]}
