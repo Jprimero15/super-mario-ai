@@ -94,7 +94,7 @@ func _generate_chunk(chunk_index: int, distance_steps: int) -> void:
 	var coin_count := rng.randi_range(3, 5)
 	var coin_start := 7 + rng.randi_range(0, 2)
 	var max_coin_index := 18
-	var max_coins_from_start := maxi(0, floori(float(max_coin_index - coin_start) / 3.0) + 1
+	var max_coins_from_start := maxi(0, floori(float(max_coin_index - coin_start) / 3.0) + 1)
 	coin_count = mini(coin_count, max_coins_from_start)
 	for i in range(coin_count):
 		var coin_x := start_x + float(coin_start + i * 3) * TILE
