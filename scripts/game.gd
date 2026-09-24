@@ -29,7 +29,7 @@ var run_finishing: bool = false
 var restart_pending: bool = false
 var lifecycle_token: int = 0
 var background_time: float = 0.0
-var run_best_notified := false
+var last_milestone := 0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -71,6 +71,7 @@ func _ready() -> void:
 	add_child(hud)
 
 	world.generate_until(player.position.x, steps)
+	_check_milestone()
 	_wire_enemies()
 	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps), player.shielded, ScoreManager.best_steps)
 	queue_redraw()
@@ -121,6 +122,14 @@ func _wire_enemies() -> void:
 		enemy.player_contact.connect(_on_enemy_contact)
 		enemy.stomped.connect(_on_enemy_stomp)
 		enemy.set_meta("maryou_wired", true)
+
+func _check_milestone() -> void:
+	var milestone := (steps / 500) * 500
+	if milestone >= 500 and milestone > last_milestone:
+		last_milestone = milestone
+		AudioManager.play_sfx("milestone")
+		if is_instance_valid(hud):
+			hud.show_milestone(milestone)
 
 func _on_coin() -> void:
 	ScoreManager.add_coin()
