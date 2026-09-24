@@ -110,7 +110,7 @@ func _physics_process(delta: float) -> void:
 
 	if player.position.y > WORLD_HEIGHT + 80.0:
 		_finish_run()
-	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps), player.shielded)
+	hud.update_stats(steps, ScoreManager.coins, MaryouDifficultyCurve.tier_for_steps(steps), player.shielded, ScoreManager.best_steps)
 
 func _wire_enemies() -> void:
 	for child in enemies.get_children():
