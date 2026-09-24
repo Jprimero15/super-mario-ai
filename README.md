@@ -244,6 +244,8 @@ The remaining areas for future work are primarily polish and gameplay-depth impr
 - More visual variety between procedural chunks.
 - Breakable crates reward successful stomps with a coin.
 - Enemy stomps reward one run coin.
+- Breakable crates reward successful stomps with a coin.
+- Enemy stomps reward one run coin.
 - More background decoration as optional low-cost effects.
 - Additional automated gameplay tests beyond the current smoke test.
 - A custom licensed game font.
