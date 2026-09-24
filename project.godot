@@ -2,6 +2,7 @@
 config_version=5
 
 [application]
+boot_splash/show_image=false
 config/name="Maryou AI"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
