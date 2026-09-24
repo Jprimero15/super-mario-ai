@@ -61,11 +61,11 @@ func _initialize() -> void:
 		else:
 			# Keep the smoke test out of the active scene tree so game._ready()
 			# does not start a full gameplay run or require runtime autoload nodes.
-			game.steps = 499
+			game.steps = 299
 			game._check_milestone()
 			if game.last_milestone != 0:
 				failures.append("milestone fired before 500")
-			game.steps = 500
+			game.steps = 300
 			game._check_milestone()
 			if game.last_milestone != 500:
 				failures.append("milestone did not fire at 500")
