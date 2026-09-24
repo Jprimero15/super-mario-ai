@@ -129,7 +129,10 @@ func _check_milestone() -> void:
 	var milestone := (steps / 500) * 500
 	if milestone >= 500 and milestone > last_milestone:
 		last_milestone = milestone
-		get_node("/root/AudioManager").play_sfx("milestone")
+		if is_inside_tree():
+			var audio_manager := get_node_or_null("/root/AudioManager")
+			if audio_manager != null:
+				audio_manager.play_sfx("milestone")
 		if is_instance_valid(hud):
 			hud.show_milestone(milestone)
 
