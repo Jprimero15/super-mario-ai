@@ -67,7 +67,7 @@ func _ready() -> void:
 	camera.position_smoothing_speed = 7.0
 	add_child(camera)
 
-func tick(delta: float, target_speed: float, left: bool, right: bool, jump_pressed: bool, jump_held: bool) -> void:
+func tick(delta: float, target_speed: float, jump_pressed: bool, jump_held: bool) -> void:
 	coin_flash = maxf(0.0, coin_flash - delta)
 	coin_burst_power = maxf(0.0, coin_burst_power - delta * 3.0)
 	hit_invulnerability = maxf(0.0, hit_invulnerability - delta)
@@ -99,18 +99,9 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump_press
 	else:
 		coyote_timer = maxf(0.0, coyote_timer - delta)
 
-	var direction := 0.0
-	if left:
-		direction -= 1.0
-	if right:
-		direction += 1.0
-	direction = clampf(direction, -1.0, 1.0)
-
-	var desired_x := target_speed + direction * max_side_speed
-	if direction != 0.0:
-		velocity.x = move_toward(velocity.x, desired_x, side_accel * delta)
-	else:
-		velocity.x = move_toward(velocity.x, target_speed, side_decel * delta)
+	# Auto-run: horizontal movement is fully controlled by the game speed.
+	# There are no left/right controls; jumping is the only player input.
+	velocity.x = move_toward(velocity.x, target_speed, side_accel * delta)
 
 	if jump_buffer_timer > 0.0 and coyote_timer > 0.0:
 		velocity.y = jump_velocity
@@ -151,12 +142,7 @@ func tick(delta: float, target_speed: float, left: bool, right: bool, jump_press
 		_set_animation("idle")
 
 	if is_instance_valid(animated_sprite):
-		if right:
-			animated_sprite.flip_h = false
-		elif left:
-			animated_sprite.flip_h = true
-		else:
-			animated_sprite.flip_h = false
+		animated_sprite.flip_h = false
 
 		if last_animation == "run":
 			animated_sprite.speed_scale = clampf(absf(velocity.x) / 180.0, 0.85, 1.75)
