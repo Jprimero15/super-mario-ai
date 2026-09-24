@@ -1,8 +1,10 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 [ext_resource type="Texture2D" path="res://assets/world/obstacles.svg" id="1"]
+[ext_resource type="Script" path="res://scripts/crate.gd" id="2"]
 [sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(50, 50)
 [node name="Crate" type="StaticBody2D"]
+script = ExtResource("2")
 collision_layer = 2
 collision_mask = 1
 [node name="Sprite2D" type="Sprite2D" parent="."]
