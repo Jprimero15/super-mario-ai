@@ -28,6 +28,6 @@ func _on_trigger_body_entered(body: Node2D) -> void:
 	if player.global_position.y >= global_position.y or player.velocity.y < 0.0:
 		return
 	broken = true
-	ScoreManager.add_coin()
-	AudioManager.play_sfx("stomp")
+	get_node("/root/ScoreManager").add_coin()
+	get_node("/root/AudioManager").play_sfx("stomp")
 	queue_free()
