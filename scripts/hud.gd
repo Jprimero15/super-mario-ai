@@ -56,7 +56,7 @@ func _build() -> void:
 	var stats := VBoxContainer.new()
 	stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(stats)
-	steps_label = _label("STEPS 0", 30 if not compact else 23)
+	steps_label = _label("DISTANCE 0", 30 if not compact else 23)
 	stats.add_child(steps_label)
 	status_label = _label("COINS 0  •  HP 1", 18 if not compact else 15)
 	stats.add_child(status_label)
@@ -73,20 +73,23 @@ func _build() -> void:
 	)
 	right.add_child(pause)
 
-	var controls := HBoxContainer.new()
-	controls.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	controls.offset_left = 14.0
-	controls.offset_top = -98.0
-	controls.offset_right = -14.0
-	controls.offset_bottom = -12.0
-	controls.add_theme_constant_override("separation", 10)
-	root.add_child(controls)
-	_add_control_button(controls, "‹", "move_left", 104 if not compact else 88, 82 if not compact else 70)
-	_add_control_button(controls, "›", "move_right", 104 if not compact else 88, 82 if not compact else 70)
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	controls.add_child(spacer)
-	_add_control_button(controls, "JUMP", "jump", 170 if not compact else 142, 82 if not compact else 70)
+	# Jump-only control: the runner is always moving forward.
+	var jump_area := CenterContainer.new()
+	jump_area.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	jump_area.offset_top = -122.0
+	jump_area.offset_bottom = -16.0
+	root.add_child(jump_area)
+	var jump_button := _button("JUMP", 96 if not compact else 82)
+	jump_button.custom_minimum_size = Vector2(250 if not compact else 210, 96 if not compact else 82)
+	jump_button.add_theme_font_size_override("font_size", 28 if not compact else 24)
+	jump_button.add_theme_stylebox_override("normal", _box(Color("#176b4a"), 28))
+	jump_button.add_theme_stylebox_override("hover", _box(Color("#218b60"), 28))
+	jump_button.add_theme_stylebox_override("pressed", _box(Color("#0f5038"), 28))
+	jump_button.button_down.connect(func(): Input.action_press("jump"))
+	jump_button.button_up.connect(func(): Input.action_release("jump"))
+	jump_button.focus_mode = Control.FOCUS_NONE
+	jump_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	jump_area.add_child(jump_button)
 
 	overlay = ColorRect.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -98,9 +101,9 @@ func _build() -> void:
 	checkpoint_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	checkpoint_notice.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	checkpoint_notice.offset_left = -180.0
-	checkpoint_notice.offset_top = 116.0
+	checkpoint_notice.offset_top = 108.0
 	checkpoint_notice.offset_right = 180.0
-	checkpoint_notice.offset_bottom = 152.0
+	checkpoint_notice.offset_bottom = 146.0
 	checkpoint_notice.visible = false
 	root.add_child(checkpoint_notice)
 
@@ -259,8 +262,8 @@ func show_game_over(steps: int, best_steps: int, new_best: bool = false, run_coi
 	settings_panel.visible = false
 
 func update_stats(steps: int, coins: int, tier: int, best_steps: int = 0) -> void:
-	steps_label.text = "STEPS %d" % steps
-	status_label.text = "COINS %d  •  BEST %d" % [coins, best_steps]
+	steps_label.text = "DISTANCE %d" % steps
+	status_label.text = "COINS %d   •   BEST %d" % [coins, best_steps]
 	tier_label.text = "DEEP FOREST" if tier >= 4 else "TIER %d" % tier
 
 func show_milestone(distance: int) -> void:
