@@ -68,7 +68,7 @@ func _build() -> void:
 	right.add_child(tier_label)
 	var pause := _button("PAUSE", 52 if not compact else 46)
 	pause.pressed.connect(func():
-		AudioManager.play_sfx("ui")
+		get_node("/root/AudioManager").play_sfx("ui")
 		pause_pressed.emit()
 	)
 	right.add_child(pause)
@@ -195,7 +195,7 @@ func _make_settings_panel(viewport_size: Vector2) -> PanelContainer:
 func _panel_button(parent: VBoxContainer, text: String, callback: Callable) -> Button:
 	var button := _button(text, 56 if not compact else 50)
 	button.pressed.connect(func():
-		AudioManager.play_sfx("ui")
+		get_node("/root/AudioManager").play_sfx("ui")
 		callback.call()
 	)
 	parent.add_child(button)
@@ -204,9 +204,9 @@ func _panel_button(parent: VBoxContainer, text: String, callback: Callable) -> B
 func _refresh_settings() -> void:
 	if not is_instance_valid(music_button):
 		return
-	music_button.text = "Music: ON" if AudioManager.music_volume > 0.01 else "Music: OFF"
-	sfx_button.text = "Sound Effects: ON" if AudioManager.sfx_volume > 0.01 else "Sound Effects: OFF"
-	vibration_button.text = "Vibration: ON" if AudioManager.vibration_enabled else "Vibration: OFF"
+	music_button.text = "Music: ON" if get_node("/root/AudioManager").music_volume > 0.01 else "Music: OFF"
+	sfx_button.text = "Sound Effects: ON" if get_node("/root/AudioManager").sfx_volume > 0.01 else "Sound Effects: OFF"
+	vibration_button.text = "Vibration: ON" if get_node("/root/AudioManager").vibration_enabled else "Vibration: OFF"
 
 func _open_settings() -> void:
 	_release_controls()
@@ -221,15 +221,15 @@ func _close_settings() -> void:
 	overlay.visible = true
 
 func _toggle_music() -> void:
-	AudioManager.set_music_volume(0.0 if AudioManager.music_volume > 0.01 else 0.8)
+	get_node("/root/AudioManager").set_music_volume(0.0 if get_node("/root/AudioManager").music_volume > 0.01 else 0.8)
 	_refresh_settings()
 
 func _toggle_sfx() -> void:
-	AudioManager.set_sfx_volume(0.0 if AudioManager.sfx_volume > 0.01 else 0.9)
+	get_node("/root/AudioManager").set_sfx_volume(0.0 if get_node("/root/AudioManager").sfx_volume > 0.01 else 0.9)
 	_refresh_settings()
 
 func _toggle_vibration() -> void:
-	AudioManager.set_vibration_enabled(not AudioManager.vibration_enabled)
+	get_node("/root/AudioManager").set_vibration_enabled(not get_node("/root/AudioManager").vibration_enabled)
 	_refresh_settings()
 
 func show_pause(value: bool, steps: int, best_steps: int) -> void:
