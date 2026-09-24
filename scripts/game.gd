@@ -1,4 +1,5 @@
 extends Node2D
+class_name MaryouGame
 
 const PlayerScene = preload("res://scripts/player.gd")
 const WorldScene = preload("res://scripts/world_generator.gd")
