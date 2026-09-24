@@ -263,6 +263,14 @@ func update_stats(steps: int, coins: int, tier: int, shielded: bool = false, bes
 	status_label.text = "COINS %d  •  BEST %d" % [coins, best_steps] if not shielded else "COINS %d  •  SHIELD" % coins
 	tier_label.text = "DEEP FOREST" if tier >= 4 else "TIER %d" % tier
 
+func show_milestone(distance: int) -> void:
+	checkpoint_notice.text = "%d STEPS!" % distance
+	checkpoint_notice.visible = true
+	checkpoint_notice.modulate = Color(1.0, 0.9, 0.35, 1.0)
+	var tween := create_tween()
+	tween.tween_property(checkpoint_notice, "modulate", Color(1, 1, 1, 0), 0.9).set_delay(0.2)
+	tween.tween_callback(func(): checkpoint_notice.visible = false)
+
 func show_checkpoint_notice() -> void:
 	checkpoint_notice.visible = true
 	checkpoint_notice.modulate = Color.WHITE
