@@ -6,9 +6,11 @@ func _draw() -> void:
 	super._draw()
 
 	# Forest-specific foreground solids are drawn after the background.
-	var cam_x: float = player.position.x if is_instance_valid(player) else 640.0
-	var first_visible_x: float = cam_x - 1700.0
-	var last_visible_x: float = cam_x + 1900.0
+	var cam_x: float = player.camera.global_position.x if is_instance_valid(player) and is_instance_valid(player.camera) else (player.position.x if is_instance_valid(player) else 640.0)
+	var camera_zoom := player.camera.zoom if is_instance_valid(player) and is_instance_valid(player.camera) else Vector2.ONE
+	var visible_world_width := get_viewport_rect().size.x / maxf(camera_zoom.x, 0.01)
+	var first_visible_x: float = cam_x - visible_world_width * 0.75 - 64.0
+	var last_visible_x: float = cam_x + visible_world_width * 0.75 + 64.0
 	if not is_instance_valid(world):
 		return
 	for chunk_value in world.active_chunks.values():
