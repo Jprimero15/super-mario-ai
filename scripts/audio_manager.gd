@@ -9,6 +9,7 @@ var music_volume := 0.8
 var sfx_volume := 0.9
 var vibration_enabled := true
 var music_player: AudioStreamPlayer
+var sfx_streams: Dictionary = {}
 
 func _ready() -> void:
 	_ensure_bus(MUSIC_BUS)
@@ -16,6 +17,7 @@ func _ready() -> void:
 	_load_settings()
 	_apply_music()
 	_apply_sfx()
+	_cache_sfx_streams()
 	_start_procedural_music()
 
 func _exit_tree() -> void:
@@ -47,13 +49,22 @@ func play_sfx(type: String) -> void:
 		vibrate(18 if type == "coin" else 32 if type == "stomp" else 55 if type == "hit" else 80, 0.28 if type == "coin" else 0.45)
 	var player := AudioStreamPlayer.new()
 	player.bus = SFX_BUS
-	player.stream = _tone_stream(type)
+	player.stream = _get_sfx_stream(type)
 	add_child(player)
 	player.finished.connect(player.queue_free)
 	player.play()
 
+func _cache_sfx_streams() -> void:
+	for type in ["jump", "coin", "stomp", "hit", "game_over", "ui", "milestone"]:
+		sfx_streams[type] = _tone_stream(type)
+
+func _get_sfx_stream(type: String) -> AudioStreamWAV:
+	if not sfx_streams.has(type):
+		sfx_streams[type] = _tone_stream(type)
+	return sfx_streams[type] as AudioStreamWAV
+
 func _tone_stream(type: String) -> AudioStreamWAV:
-	var frequencies := {"jump": 520.0, "coin": 880.0, "stomp": 220.0, "hit": 120.0, "shield": 660.0, "game_over": 90.0, "ui": 440.0, "milestone": 740.0}
+	var frequencies := {"jump": 520.0, "coin": 880.0, "stomp": 220.0, "hit": 120.0, "game_over": 90.0, "ui": 440.0, "milestone": 740.0}
 	var frequency: float = frequencies.get(type, 440.0)
 	var length := 0.10 if type != "game_over" and type != "milestone" else 0.35 if type == "game_over" else 0.18
 	var samples := int(length * MUSIC_RATE)
@@ -79,7 +90,7 @@ func _start_procedural_music() -> void:
 	music_player.stream = _build_music_stream()
 	add_child(music_player)
 	# Do not use AudioStreamWAV.LOOP_FORWARD here. Godot's WAV loop boundary
-	# handling has had over-read issues, and this project targets Android 16.
+	# handling has had over-read issues on Android.
 	# Restarting the finished stream on the main thread is safer.
 	music_player.finished.connect(_on_music_finished)
 	music_player.play()
