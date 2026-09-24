@@ -20,12 +20,12 @@ func reset_run() -> void:
 func add_coin() -> void:
 	coins += 1
 	total_coins += 1
-	AudioManager.play_sfx("coin")
+	get_node("/root/AudioManager").play_sfx("coin")
 
 func add_stomp() -> void:
 	coins += 1
 	total_coins += 1
-	AudioManager.play_sfx("stomp")
+	get_node("/root/AudioManager").play_sfx("stomp")
 
 func finish_run() -> void:
 	if not run_active: return
@@ -34,7 +34,7 @@ func finish_run() -> void:
 	new_best = steps > best_steps
 	best_steps = maxi(best_steps, steps)
 	save_records()
-	AudioManager.play_sfx("game_over")
+	get_node("/root/AudioManager").play_sfx("game_over")
 
 func load_records() -> void:
 	var cfg := ConfigFile.new()
