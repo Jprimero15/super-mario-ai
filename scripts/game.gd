@@ -28,6 +28,10 @@ var restart_pending: bool = false
 var lifecycle_token: int = 0
 var background_time: float = 0.0
 var last_milestone := 0
+var last_progress_x: float = 0.0
+var stuck_timer: float = 0.0
+const STUCK_TIMEOUT: float = 0.55
+const CAMERA_FORWARD_OFFSET: float = 250.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -69,6 +73,7 @@ func _ready() -> void:
 	add_child(hud)
 
 	world.generate_until(player.position.x, steps)
+	last_progress_x = player.position.x
 	_check_milestone()
 	_wire_enemies()
 	hud.update_stats(steps, get_node("/root/ScoreManager").coins, MaryouDifficultyCurve.tier_for_steps(steps), get_node("/root/ScoreManager").best_steps)
@@ -92,13 +97,28 @@ func _physics_process(delta: float) -> void:
 	get_node("/root/ScoreManager").steps = steps
 	_check_milestone()
 	var speed: float = MaryouDifficultyCurve.speed_for_steps(steps)
-	var left: bool = Input.is_action_pressed("move_left")
-	var right: bool = Input.is_action_pressed("move_right")
 	var jump_held: bool = Input.is_action_pressed("jump")
 	var jump_pressed: bool = Input.is_action_just_pressed("jump")
 	if jump_pressed:
 		get_node("/root/AudioManager").play_sfx("jump")
-	player.tick(delta, speed, left, right, jump_pressed, jump_held)
+	player.tick(delta, speed, jump_pressed, jump_held)
+
+	# The camera keeps advancing even if the player gets wedged against an obstacle.
+	# Falling behind the moving camera or making no forward progress is fatal.
+	if player.position.x > last_progress_x + 1.0:
+		last_progress_x = player.position.x
+		stuck_timer = 0.0
+	else:
+		stuck_timer += delta
+	if stuck_timer >= STUCK_TIMEOUT:
+		_finish_run(0.90)
+		return
+	if is_instance_valid(player.camera):
+		var camera_target_x := maxf(player.position.x + CAMERA_FORWARD_OFFSET, player.camera.global_position.x + speed * delta)
+		player.camera.global_position.x = camera_target_x
+		if player.position.x < player.camera.global_position.x - 310.0:
+			_finish_run(0.90)
+			return
 
 	world.generate_until(player.position.x, steps)
 	_wire_enemies()
@@ -123,7 +143,7 @@ func _wire_enemies() -> void:
 		enemy.set_meta("maryou_wired", true)
 
 func _check_milestone() -> void:
-	var milestone := (steps / 500) * 500
+	var milestone := (steps / 300) * 300
 	if milestone >= 500 and milestone > last_milestone:
 		last_milestone = milestone
 		if is_inside_tree():
@@ -242,26 +262,17 @@ func _draw() -> void:
 	elif is_instance_valid(player):
 		cam_x = player.global_position.x
 
-	# Full world-space backdrop. This removes the large empty band visible in
-	# the old screenshot while leaving the actual platform/obstacle art on top.
-	var world_view_width := get_viewport_rect().size.x / maxf(camera_zoom.x, 0.01)
+ 	var world_view_width := get_viewport_rect().size.x / maxf(camera_zoom.x, 0.01)
 	var world_view_height := get_viewport_rect().size.y / maxf(camera_zoom.y, 0.01)
-	draw_rect(
-		Rect2(cam_x - world_view_width * 1.5, cam_y - world_view_height * 1.5, world_view_width * 3.0, world_view_height * 3.0),
-		Color("#9ad65d")
-	)
 
-	# Soft atmospheric bands behind the forest.
-	var tier := MaryouDifficultyCurve.tier_for_steps(get_node("/root/ScoreManager").steps)
-	var sky_color := Color("#bce87b") if tier < 4 else Color("#a6c66c")
-	draw_rect(
-		Rect2(cam_x - world_view_width * 1.5, GROUND_Y - BACKGROUND_HEIGHT - 80.0, world_view_width * 3.0, 90.0),
-		sky_color
-	)
-	draw_rect(
-		Rect2(cam_x - world_view_width * 1.5, GROUND_Y - 80.0, world_view_width * 3.0, 80.0),
-		Color("#6da94a")
-	)
+	# Layered sky: brighter overhead, softer horizon, and a clean forest glow.
+	var sky_rect := Rect2(cam_x - world_view_width * 1.5, cam_y - world_view_height * 1.5, world_view_width * 3.0, GROUND_Y - (cam_y - world_view_height * 1.5))
+	draw_rect(sky_rect, Color("#8fd8f0"))
+	draw_rect(Rect2(sky_rect.position.x, sky_rect.position.y + sky_rect.size.y * 0.30, sky_rect.size.x, sky_rect.size.y * 0.35), Color("#a9e3f2"))
+	draw_rect(Rect2(sky_rect.position.x, sky_rect.position.y + sky_rect.size.y * 0.65, sky_rect.size.x, sky_rect.size.y * 0.35), Color("#d0edc2"))
+
+	# Soft horizon haze makes the forest and platforms read clearly.
+	draw_rect(Rect2(cam_x - world_view_width * 1.5, GROUND_Y - 145.0, world_view_width * 3.0, 145.0), Color("#8fcf79"))
 
 	# Farthest -> nearest, matching the intended Back -> Far -> Middle stack.
 	_draw_parallax_layer(BACK_TEXTURE, cam_x, BACK_PARALLAX, Color(0.76, 0.86, 0.58, 1.0))
@@ -278,22 +289,12 @@ func _draw() -> void:
 				var sy := GROUND_Y - 90.0 - fi * 36.0
 				draw_line(Vector2(sx, sy), Vector2(sx - (18.0 + speed_ratio * 28.0), sy), Color(1.0, 1.0, 1.0, 0.12 + speed_ratio * 0.10), 2.0)
 
-	# A proper foreground/soil band makes the play surface read as a world
-	# instead of a floating strip above the dark screen area.
-	draw_rect(
-		Rect2(cam_x - world_view_width * 1.5, GROUND_Y, world_view_width * 3.0, world_view_height * 1.5),
-		Color("#243b2b")
-	)
-	draw_rect(
-		Rect2(cam_x - world_view_width * 1.5, GROUND_Y, world_view_width * 3.0, 7.0),
-		Color("#5f9c49")
-	)
-	draw_line(
-		Vector2(cam_x - world_view_width * 1.5, GROUND_Y + 8.0),
-		Vector2(cam_x + world_view_width * 1.5, GROUND_Y + 8.0),
-		Color("#365b36"),
-		2.0
-	)
+	# Warm layered soil replaces the old dark lower band and makes the ground
+	# feel intentional on both mobile and desktop.
+	draw_rect(Rect2(cam_x - world_view_width * 1.5, GROUND_Y, world_view_width * 3.0, world_view_height * 1.5), Color("#70452f"))
+	draw_rect(Rect2(cam_x - world_view_width * 1.5, GROUND_Y, world_view_width * 3.0, 9.0), Color("#4f8f3e"))
+	draw_rect(Rect2(cam_x - world_view_width * 1.5, GROUND_Y + 9.0, world_view_width * 3.0, 8.0), Color("#9b6a43"))
+	draw_line(Vector2(cam_x - world_view_width * 1.5, GROUND_Y + 28.0), Vector2(cam_x + world_view_width * 1.5, GROUND_Y + 28.0), Color("#5b3828"), 2.0)
 
 	# Lightweight animated atmosphere: deterministic fireflies and drifting
 	# leaves. They are drawn in world space, so they remain stable with camera
