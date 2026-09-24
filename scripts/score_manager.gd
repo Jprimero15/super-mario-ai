@@ -23,6 +23,8 @@ func add_coin() -> void:
 	AudioManager.play_sfx("coin")
 
 func add_stomp() -> void:
+	coins += 1
+	total_coins += 1
 	AudioManager.play_sfx("stomp")
 
 func finish_run() -> void:
