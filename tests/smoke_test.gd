@@ -17,9 +17,40 @@ func _initialize() -> void:
 	var first_kind := MaryouDifficultyCurve.enemy_kind(1500, 0, rng)
 	if first_kind < 0 or first_kind > 5:
 		failures.append("enemy kind range")
+
 	var player := MaryouPlayer.new()
 	if player == null:
 		failures.append("player creation")
+	else:
+		if not player.take_damage(1):
+			failures.append("single player damage must register")
+
+	var enemies := Node2D.new()
+	var world := MaryouWorldGenerator.new()
+	world.setup(enemies)
+	world.run_seed = 12345
+	world._generate_chunk(1, 0)
+	if not world.active_chunks.has(1):
+		failures.append("chunk generation")
+	else:
+		var chunk: MaryouChunk = world.active_chunks[1]
+		for child in chunk.get_children():
+			if child is Area2D and child.name == "Coin":
+				if child.position.x < world.CHUNK_WIDTH or child.position.x >= world.CHUNK_WIDTH * 2.0:
+					failures.append("coin spawned outside chunk bounds")
+					break
+
+	var game := MaryouGame.new()
+	root.add_child(game)
+	game.steps = 499
+	game._physics_process(0.0)
+	if game.last_milestone != 0:
+		failures.append("milestone fired before 500")
+	game.steps = 500
+	game._physics_process(0.0)
+	if game.last_milestone != 500:
+		failures.append("milestone did not fire at 500")
+
 	if failures.is_empty():
 		print("MARYOU SMOKE TEST: PASS")
 		quit(0)
